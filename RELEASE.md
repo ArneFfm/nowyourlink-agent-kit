@@ -16,3 +16,7 @@ This kit is prepared locally; registry and plugin marketplace publication are pe
 ## Verified PyPI release — 2026-09-07
 
 Published `nowyourlink-spotlights==0.1.0` using the configured Trusted Publisher. [Workflow run 34119107611](https://github.com/ArneFfm/nowyourlink-agent-kit/actions/runs/34119107611) succeeded. Both wheel and source distribution are public. A fresh virtual environment installed the package from PyPI and successfully called `SpotlightClient().list(limit=1)`. npm is still awaiting publisher authentication.
+
+## npm publication verified — 2026-09-07
+
+Published `nowyourlink-agent-kit@0.1.0` under MIT. Registry metadata, fresh registry installation, and installed `nowyourlink list --limit 1` all passed. Both npm and PyPI packages are now public. OpenAI submission remains deferred.

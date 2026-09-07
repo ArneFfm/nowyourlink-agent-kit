@@ -2,7 +2,7 @@
 
 Read the current nowyourlink advertising Spotlight and browse published, settled days. This standalone kit contains an official product skill, portable agent plugin, Codex compatibility manifest, and dependency-free JavaScript SDK and CLI, plus a Python standard-library SDK. It requires no account or API key.
 
-**Distribution status:** release preparation in progress. The public source repository is [ArneFfm/nowyourlink-agent-kit](https://github.com/ArneFfm/nowyourlink-agent-kit). Python SDK 0.1.0 is published on [PyPI](https://pypi.org/project/nowyourlink-spotlights/0.1.0/). npm publication is pending its publisher authentication.
+**Distribution status:** release preparation in progress. The public source repository is [ArneFfm/nowyourlink-agent-kit](https://github.com/ArneFfm/nowyourlink-agent-kit). Python SDK 0.1.0 is published on [PyPI](https://pypi.org/project/nowyourlink-spotlights/0.1.0/). JavaScript SDK and CLI 0.1.0 are published on [npm](https://www.npmjs.com/package/nowyourlink-agent-kit). Install with `npm install nowyourlink-agent-kit`, or run `npx nowyourlink-agent-kit list --limit 5`.
 
 ## Run locally
 
