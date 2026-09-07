@@ -2,7 +2,11 @@
 
 Read the current nowyourlink advertising Spotlight and browse published, settled days. This standalone kit contains an official product skill, portable agent plugin, Codex compatibility manifest, and dependency-free JavaScript SDK and CLI, plus a Python standard-library SDK. It requires no account or API key.
 
-**Distribution status:** release preparation in progress. The public source repository is [ArneFfm/nowyourlink-agent-kit](https://github.com/ArneFfm/nowyourlink-agent-kit). Python SDK 0.1.0 is published on [PyPI](https://pypi.org/project/nowyourlink-spotlights/0.1.0/). JavaScript SDK and CLI 0.1.0 are published on [npm](https://www.npmjs.com/package/nowyourlink-agent-kit). Install with `npm install nowyourlink-agent-kit`, or run `npx nowyourlink-agent-kit list --limit 5`.
+**Distribution status:** SDKs and CLI published. The public source repository is [ArneFfm/nowyourlink-agent-kit](https://github.com/ArneFfm/nowyourlink-agent-kit). Python SDK 0.1.0 is published on [PyPI](https://pypi.org/project/nowyourlink-spotlights/0.1.0/). JavaScript SDK and CLI 0.1.0 are published on [npm](https://www.npmjs.com/package/nowyourlink-agent-kit). Install with `npm install nowyourlink-agent-kit`, or run `npx nowyourlink-agent-kit list --limit 5`.
+
+## MCP registry
+
+The public remote server is published as `io.github.ArneFfm/nowyourlink` version `1.0.0` in the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.ArneFfm%2Fnowyourlink). Connect to `https://nowyourlink.com/mcp` using Streamable HTTP without credentials. The published metadata is retained in [server.json](server.json); the registry version describes the remote server, independently of SDK package versions.
 
 ## Run locally
 
