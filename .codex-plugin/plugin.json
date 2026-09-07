@@ -1,0 +1,20 @@
+{
+  "name": "nowyourlink-agent-kit",
+  "version": "0.1.0",
+  "description": "Read public nowyourlink Spotlights and integration documentation.",
+  "author": {
+    "name": "nowyourlink"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "nowyourlink Spotlights",
+    "shortDescription": "Read current and historical public Spotlights.",
+    "longDescription": "Anonymous, read-only access to nowyourlink advertising Spotlights and developer documentation.",
+    "developerName": "nowyourlink",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": ["Show the current nowyourlink Spotlight."]
+  },
+  "mcpServers": "./.mcp.json",
+  "homepage": "https://nowyourlink.com/developers"
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "nowyourlink": {
+      "type": "http",
+      "url": "https://nowyourlink.com/mcp"
+    }
+  }
+}

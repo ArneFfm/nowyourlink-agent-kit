@@ -1,0 +1,42 @@
+{
+  "name": "nowyourlink-agent-kit",
+  "version": "0.1.0",
+  "description": "Dependency-free client, CLI and agent plugin for public nowyourlink Spotlights.",
+  "homepage": "https://nowyourlink.com",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./sdk.d.ts",
+      "import": "./sdk.js",
+      "default": "./sdk.js"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ArneFfm/nowyourlink-agent-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ArneFfm/nowyourlink-agent-kit/issues"
+  },
+  "bin": {
+    "nowyourlink": "./cli.js"
+  },
+  "types": "./sdk.d.ts",
+  "files": [
+    "sdk.js",
+    "sdk.d.ts",
+    "cli.js",
+    "plugin.json",
+    "mcp.json",
+    ".codex-plugin/plugin.json",
+    ".mcp.json",
+    "skills/"
+  ],
+  "license": "MIT"
+}

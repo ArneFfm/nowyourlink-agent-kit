@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "nowyourlink-agent-kit",
+  "version": "0.1.0",
+  "description": "Read current and settled nowyourlink advertising Spotlights and public integration documentation.",
+  "author": { "name": "nowyourlink", "url": "https://nowyourlink.com" },
+  "homepage": "https://nowyourlink.com/developers",
+  "keywords": ["spotlights", "advertising", "read-only", "mcp"]
+}
