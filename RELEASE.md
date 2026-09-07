@@ -12,3 +12,7 @@ This kit is prepared locally; registry and plugin marketplace publication are pe
 - [x] Owner authorized npm/PyPI publication; npm is publishable and both packages target release 0.1.0.
 - [ ] Submit the public plugin source to the chosen client marketplace or directory and validate its remote MCP connection.
 - [ ] Verify anonymous source access, install commands, package pages and tool reads after publication before advertising availability.
+
+## Verified PyPI release — 2026-09-07
+
+Published `nowyourlink-spotlights==0.1.0` using the configured Trusted Publisher. [Workflow run 34119107611](https://github.com/ArneFfm/nowyourlink-agent-kit/actions/runs/34119107611) succeeded. Both wheel and source distribution are public. A fresh virtual environment installed the package from PyPI and successfully called `SpotlightClient().list(limit=1)`. npm is still awaiting publisher authentication.
