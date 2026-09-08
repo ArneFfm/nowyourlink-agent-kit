@@ -1,0 +1,46 @@
+name: Publish npm SDK and CLI
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate without publishing
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate release source and version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          git merge-base --is-ancestor HEAD origin/main
+          if [ "$GITHUB_EVENT_NAME" = release ]; then
+            test "$RELEASE_TAG" = "v$(node -p 'JSON.parse(require("fs").readFileSync("package.json")).version')"
+          fi
+      - name: Test SDK and CLI
+        run: npm test
+      - name: Validate package
+        run: npm pack --dry-run
+      - name: Publish with npm trusted publishing
+        if: github.event_name == 'release' || !inputs.dry_run
+        run: npm publish --access public --registry https://registry.npmjs.org

@@ -20,3 +20,28 @@ Published `nowyourlink-spotlights==0.1.0` using the configured Trusted Publisher
 ## npm publication verified — 2026-09-07
 
 Published `nowyourlink-agent-kit@0.1.0` under MIT. Registry metadata, fresh registry installation, and installed `nowyourlink list --limit 1` all passed. Both npm and PyPI packages are now public. OpenAI submission remains deferred.
+
+## npm OIDC releases
+
+`publish-npm.yml` runs tests and validates the package on GitHub-hosted Node 24.
+Publishing uses OIDC (`id-token: write`) without an npm token. Published GitHub
+releases must use `v<package.json version>` and point to a commit on `main`.
+Manual runs are restricted to `main` and default to dry-run; uncheck `dry_run`
+only for a new package version that should be published.
+
+Configure the npm Trusted Publisher for `nowyourlink-agent-kit`:
+- Organization/user: `ArneFfm`
+- Repository: `nowyourlink-agent-kit`
+- Workflow filename: `publish-npm.yml`
+- Environment: `npm`
+- Allowed action: Publish
+
+With an authenticated npm CLI supporting `npm trust`:
+
+```sh
+npm trust github nowyourlink-agent-kit --repo ArneFfm/nowyourlink-agent-kit --file publish-npm.yml --env npm --allow-publish --yes
+```
+
+The GitHub workflow alone does not create this npm-side trust. A dry-run validates
+tests and packaging, but does not prove that npm accepts the OIDC identity.
+Existing published versions cannot be republished.
