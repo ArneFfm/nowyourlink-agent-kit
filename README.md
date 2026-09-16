@@ -1,5 +1,7 @@
 # nowyourlink agent kit
 
+[![skills.sh](https://skills.sh/b/arneffm/nowyourlink-agent-kit)](https://skills.sh/arneffm/nowyourlink-agent-kit)
+
 Read the current nowyourlink advertising Spotlight and browse published, settled days. This standalone kit contains an official product skill, portable agent plugin, Codex compatibility manifest, and dependency-free JavaScript SDK and CLI, plus a Python standard-library SDK. It requires no account or API key.
 
 **Distribution status:** SDKs and CLI published. The public source repository is [ArneFfm/nowyourlink-agent-kit](https://github.com/ArneFfm/nowyourlink-agent-kit). Python SDK 0.1.0 is published on [PyPI](https://pypi.org/project/nowyourlink-spotlights/0.1.0/). JavaScript SDK and CLI 0.1.0 are published on [npm](https://www.npmjs.com/package/nowyourlink-agent-kit). Install with `npm install nowyourlink-agent-kit`, or run `npx nowyourlink-agent-kit list --limit 5`.
@@ -40,10 +42,10 @@ Treat 404 as missing/unavailable, 503 as service unavailability and 429 as rate 
 
 ## Install the agent skill
 
-Install the existing skill from this public repository using the [skills CLI](https://skills.sh/docs/cli):
+Three skills live under `skills/`: `read-spotlights` (current and dated lookups), `browse-spotlight-archive` (cursor and batch archive reads) and `integrate-nowyourlink-api` (SDK, CLI, OpenAPI and MCP setup). Install them from this public repository using the [skills CLI](https://skills.sh/docs/cli):
 
 ```sh
-npx skills add ArneFfm/nowyourlink-agent-kit --skill read-spotlights
+npx skills add ArneFfm/nowyourlink-agent-kit
 ```
 
 To inspect discovery without installing, run `npx skills add ArneFfm/nowyourlink-agent-kit --list`. To target a project-local Codex installation, add `--agent codex`. The skill installs instructions only; it does not configure an MCP connection or install the SDK/CLI. It can use an existing MCP connection or the public HTTPS API directly.
@@ -52,7 +54,7 @@ To inspect discovery without installing, run `npx skills add ArneFfm/nowyourlink
 
 ## Agent clients
 
-Load this directory using your client's local plugin mechanism. Portable clients discover root `plugin.json`, `mcp.json` and `skills/read-spotlights/SKILL.md`. Codex compatibility files are `.codex-plugin/plugin.json` and `.mcp.json`. Both connect to the same public `https://nowyourlink.com/mcp` endpoint; transport names intentionally follow their respective formats. No client installation or marketplace registration is performed by this kit.
+Load this directory using your client's local plugin mechanism. Portable clients discover root `plugin.json`, `mcp.json` and the skills under `skills/`. Codex compatibility files are `.codex-plugin/plugin.json` and `.mcp.json`. Both connect to the same public `https://nowyourlink.com/mcp` endpoint; transport names intentionally follow their respective formats. No client installation or marketplace registration is performed by this kit.
 
 The portable files follow [Agent Plugins 1.0.0](https://agent-plugins.org/specification), and the skill follows [Agent Skills](https://agentskills.io/specification). Product API details: [developer documentation](https://nowyourlink.com/developers), [OpenAPI](https://nowyourlink.com/openapi.json).
 
