@@ -1,0 +1,27 @@
+Metadata-Version: 2.4
+Name: nowyourlink
+Version: 0.2.0
+Summary: Official nowyourlink command-line client: read the current and archived public Spotlights
+License-Expression: MIT
+Project-URL: Homepage, https://nowyourlink.com
+Project-URL: Documentation, https://nowyourlink.com/developers
+Project-URL: Repository, https://github.com/ArneFfm/nowyourlink-agent-kit
+Project-URL: Issues, https://github.com/ArneFfm/nowyourlink-agent-kit/issues
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: nowyourlink-spotlights==0.2.0
+Dynamic: license-file
+
+# nowyourlink CLI
+
+Official command-line client for the public nowyourlink Spotlight API. It installs the `nowyourlink` command and depends on the `nowyourlink-spotlights` SDK; both are MIT-licensed and read only public, settled advertising data without credentials.
+
+```bash
+python -m pip install nowyourlink
+nowyourlink current
+nowyourlink list --limit 5
+nowyourlink day 2026-09-01
+```
+
+Results are JSON on stdout. Usage errors exit with code 2. See https://nowyourlink.com/developers for the API contract and https://github.com/ArneFfm/nowyourlink-agent-kit for source.

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nowyourlink"
+version = "0.2.0"
+description = "Official nowyourlink command-line client: read the current and archived public Spotlights"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["nowyourlink-spotlights==0.2.0"]
+license = "MIT"
+license-files = ["LICENSE"]
+
+[project.scripts]
+nowyourlink = "nowyourlink_spotlights:main"
+
+[project.urls]
+Homepage = "https://nowyourlink.com"
+Documentation = "https://nowyourlink.com/developers"
+Repository = "https://github.com/ArneFfm/nowyourlink-agent-kit"
+Issues = "https://github.com/ArneFfm/nowyourlink-agent-kit/issues"
+
+[tool.setuptools]
+packages = []

@@ -75,7 +75,7 @@ python3 -m unittest discover -s tests
 python3 -c 'from nowyourlink_spotlights import SpotlightClient; print(SpotlightClient().list(limit=5))'
 ```
 
-The package installs the `nowyourlink-spotlights` console script: `nowyourlink-spotlights current`, `nowyourlink-spotlights list --limit 5` and `nowyourlink-spotlights day 2026-09-01` print JSON on stdout; usage errors exit with code 2.
+The SDK installs the `nowyourlink-spotlights` console script, and the companion package `nowyourlink` (`python -m pip install nowyourlink`) provides the same commands as `nowyourlink`: `nowyourlink-spotlights current`, `nowyourlink-spotlights list --limit 5` and `nowyourlink-spotlights day 2026-09-01` print JSON on stdout; usage errors exit with code 2.
 
 `SpotlightClient().current()`, `.list(limit=20, offset=0)` and `.day("2026-09-01")` return the same API envelopes as the JavaScript SDK. `SpotlightError.status` retains HTTP status, or 0 for transport/JSON failures. Constructor options are `base_url` (HTTPS origin) and `timeout_seconds` (integer 1–60, default 10). There are no retries, cookie storage or redirects.
 

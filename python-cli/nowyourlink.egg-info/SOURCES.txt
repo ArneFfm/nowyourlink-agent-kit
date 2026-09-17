@@ -1,0 +1,9 @@
+LICENSE
+README.md
+pyproject.toml
+nowyourlink.egg-info/PKG-INFO
+nowyourlink.egg-info/SOURCES.txt
+nowyourlink.egg-info/dependency_links.txt
+nowyourlink.egg-info/entry_points.txt
+nowyourlink.egg-info/requires.txt
+nowyourlink.egg-info/top_level.txt
