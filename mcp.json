@@ -4,6 +4,10 @@
     "nowyourlink": {
       "type": "streamable-http",
       "url": "https://nowyourlink.com/mcp"
+    },
+    "nowyourlink-docs": {
+      "type": "streamable-http",
+      "url": "https://nowyourlink.com/mcp/docs"
     }
   }
 }

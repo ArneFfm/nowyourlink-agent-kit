@@ -4,7 +4,7 @@
 
 Read the current nowyourlink advertising Spotlight and browse published, settled days. This standalone kit contains an official product skill, portable agent plugin, Codex compatibility manifest, and dependency-free JavaScript SDK and CLI, plus a Python standard-library SDK. It requires no account or API key.
 
-**Distribution status:** SDKs and CLI published. The public source repository is [ArneFfm/nowyourlink-agent-kit](https://github.com/ArneFfm/nowyourlink-agent-kit). Python SDK 0.1.0 is published on [PyPI](https://pypi.org/project/nowyourlink-spotlights/0.1.0/). JavaScript SDK and CLI 0.1.0 are published on [npm](https://www.npmjs.com/package/nowyourlink-agent-kit). Install with `npm install nowyourlink-agent-kit`, or run `npx nowyourlink-agent-kit list --limit 5`.
+**Distribution status:** SDKs and CLI published. The public source repository is [ArneFfm/nowyourlink-agent-kit](https://github.com/ArneFfm/nowyourlink-agent-kit). Python SDK and CLI 0.2.0 are published on [PyPI](https://pypi.org/project/nowyourlink-spotlights/). JavaScript SDK and CLI 0.1.0 are published on [npm](https://www.npmjs.com/package/nowyourlink-agent-kit). Install with `npm install nowyourlink-agent-kit`, or run `npx nowyourlink-agent-kit list --limit 5`.
 
 ## MCP registry
 
@@ -65,7 +65,7 @@ The npm package exports TypeScript declarations and installs the `nowyourlink` e
 Install the published package:
 
 ```bash
-python -m pip install nowyourlink-spotlights==0.1.0
+python -m pip install nowyourlink-spotlights==0.2.0
 ```
 
 The `python/` directory is independently packageable. Runtime code uses only the standard library; Python 3.10 or newer is the declared target. From that directory, no installation is needed:
@@ -74,6 +74,8 @@ The `python/` directory is independently packageable. Runtime code uses only the
 python3 -m unittest discover -s tests
 python3 -c 'from nowyourlink_spotlights import SpotlightClient; print(SpotlightClient().list(limit=5))'
 ```
+
+The package installs the `nowyourlink-spotlights` console script: `nowyourlink-spotlights current`, `nowyourlink-spotlights list --limit 5` and `nowyourlink-spotlights day 2026-09-01` print JSON on stdout; usage errors exit with code 2.
 
 `SpotlightClient().current()`, `.list(limit=20, offset=0)` and `.day("2026-09-01")` return the same API envelopes as the JavaScript SDK. `SpotlightError.status` retains HTTP status, or 0 for transport/JSON failures. Constructor options are `base_url` (HTTPS origin) and `timeout_seconds` (integer 1–60, default 10). There are no retries, cookie storage or redirects.
 

@@ -66,3 +66,40 @@ class SpotlightClient:
         except (TypeError, ValueError):
             raise ValueError("day must be a valid YYYY-MM-DD date.") from None
         return self._read(f"/api/v1/spotlights/{day}")
+
+
+USAGE = "Usage: nowyourlink-spotlights current | list [--limit 1..50] [--offset 0..10000] | day YYYY-MM-DD"
+
+
+def run(argv, client=None):
+    """Return the JSON-serialisable result for one CLI invocation."""
+    client = client or SpotlightClient()
+    command, rest = (argv[0] if argv else None), list(argv[1:])
+    if command == "--help" and not rest:
+        return USAGE
+    if command == "current" and not rest:
+        return client.current()
+    if command == "day" and len(rest) == 1:
+        return client.day(rest[0])
+    if command == "list":
+        options = {}
+        for i in range(0, len(rest), 2):
+            key, value = rest[i], rest[i + 1] if i + 1 < len(rest) else ""
+            if key not in ("--limit", "--offset") or key[2:] in options or not value.isdigit():
+                raise ValueError(USAGE)
+            options[key[2:]] = int(value)
+        return client.list(**options)
+    raise ValueError(USAGE)
+
+
+def main(argv=None):
+    import json
+    import sys
+
+    try:
+        result = run(sys.argv[1:] if argv is None else argv)
+    except (ValueError, SpotlightError) as error:
+        sys.stderr.write(f"{error}\n")
+        return 2
+    sys.stdout.write((result if isinstance(result, str) else json.dumps(result, indent=2)) + "\n")
+    return 0

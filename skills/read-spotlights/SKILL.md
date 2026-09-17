@@ -13,7 +13,7 @@ Requires network access through an MCP client or HTTPS reader. The optional bund
 If your client already has the nowyourlink MCP connection configured, use `https://nowyourlink.com/mcp`. Installing this skill alone does not configure MCP or install the SDK/CLI. No credentials are needed; use the public HTTPS fallback below if MCP is unavailable.
 
 1. Choose `get_current_spotlight` for the current published item, `get_spotlight` with a valid `day` in YYYY-MM-DD format for a date, or `list_spotlights` with `limit` (1–50, default 20) and `offset` (0–10000, default 0).
-2. Retrieve public help with `read_agent_docs`, using `/developers.md` or `/auth.md`.
+2. For integration questions, connect to the documentation server at `https://nowyourlink.com/mcp/docs` and call `read_docs_page` with `/developers.md` or `/auth.md`, or `search_docs` with a query.
 3. Present the returned date, advertiser, headline and canonical URL. Identify `house_advertisement` and `paid_advertisement` as promotional content, not independent recommendations.
 4. For more pages, follow `nextOffset` only when non-null and within 10000. Stop when the user's requested range is covered; do not crawl everything by default.
 

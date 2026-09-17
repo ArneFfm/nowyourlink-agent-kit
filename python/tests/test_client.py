@@ -3,7 +3,7 @@ import unittest
 import urllib.error
 from unittest.mock import Mock
 
-from nowyourlink_spotlights import SpotlightClient, SpotlightError, _NoRedirect
+from nowyourlink_spotlights import USAGE, SpotlightClient, SpotlightError, _NoRedirect, main, run
 
 
 class ClientTest(unittest.TestCase):
@@ -74,3 +74,23 @@ class ClientTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CliTest(unittest.TestCase):
+    def test_run_dispatches_and_validates(self):
+        client = Mock()
+        client.current.return_value = {"data": None}
+        client.list.return_value = {"data": []}
+        client.day.return_value = {"data": None}
+        self.assertEqual(run(["--help"], client), USAGE)
+        self.assertEqual(run(["current"], client), {"data": None})
+        self.assertEqual(run(["day", "2024-02-29"], client), {"data": None})
+        self.assertEqual(run(["list", "--limit", "5", "--offset", "10"], client), {"data": []})
+        client.list.assert_called_with(limit=5, offset=10)
+        for argv in [[], ["nope"], ["current", "x"], ["list", "--limit"], ["list", "--limit", "x"], ["list", "--limit", "1", "--limit", "2"], ["list", "--foo", "1"]]:
+            with self.assertRaises(ValueError):
+                run(argv, client)
+
+    def test_main_exit_codes(self):
+        self.assertEqual(main(["--help"]), 0)
+        self.assertEqual(main(["bogus"]), 2)

@@ -4,13 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nowyourlink-spotlights"
-version = "0.1.0"
+version = "0.2.0"
 description = "Public read-only nowyourlink Spotlight client"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
 license = "MIT"
 license-files = ["LICENSE"]
+
+[project.scripts]
+nowyourlink-spotlights = "nowyourlink_spotlights:main"
 
 [project.urls]
 Homepage = "https://nowyourlink.com"
