@@ -10,6 +10,15 @@ Read the current nowyourlink advertising Spotlight and browse published, settled
 
 The public remote server is published as `io.github.ArneFfm/nowyourlink` version `1.0.0` in the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.ArneFfm%2Fnowyourlink). Connect to `https://nowyourlink.com/mcp` using Streamable HTTP without credentials. The published metadata is retained in [server.json](server.json); the registry version describes the remote server, independently of SDK package versions.
 
+## Documentation
+
+- [nowyourlink API documentation](https://nowyourlink.com/developers) — endpoints, limits, examples
+- [nowyourlink OpenAPI specification](https://nowyourlink.com/openapi.json)
+- [nowyourlink agent guide](https://nowyourlink.com/agents) — MCP tools, usage rules
+- [nowyourlink authentication](https://nowyourlink.com/auth) — anonymous public access
+- [nowyourlink MCP server](https://nowyourlink.com/mcp) (Streamable HTTP) and [docs MCP server](https://nowyourlink.com/mcp/docs)
+- [nowyourlink pricing](https://nowyourlink.com/pricing) and [API versioning policy](https://nowyourlink.com/versioning)
+
 ## Run locally
 
 From this directory, using Node.js 22 or newer:
