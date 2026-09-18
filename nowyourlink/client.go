@@ -45,12 +45,19 @@ type Page struct {
 }
 
 // Error is an HTTP failure (Status > 0) or a transport/JSON failure (Status == 0).
+// Err carries the underlying cause for errors.Is and errors.As.
 type Error struct {
 	Status  int
 	Message string
+	Err     error
 }
 
 func (e *Error) Error() string { return e.Message }
+
+// Unwrap returns the underlying cause, if any.
+func (e *Error) Unwrap() error { return e.Err }
+
+const maxBody = 1 << 20
 
 var dayPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 
@@ -85,6 +92,9 @@ func WithHTTPClient(h *http.Client) Option {
 		}
 		copied := *h
 		copied.CheckRedirect = noRedirect
+		if copied.Timeout == 0 {
+			copied.Timeout = 10 * time.Second
+		}
 		c.http = &copied
 		return nil
 	}
@@ -92,7 +102,7 @@ func WithHTTPClient(h *http.Client) Option {
 
 func noRedirect(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 
-// New returns a Client with a 10 second timeout that rejects redirects.
+// New returns a Client with a 10 second timeout that does not follow redirects.
 func New(opts ...Option) (*Client, error) {
 	c := &Client{
 		origin: DefaultBaseURL,
@@ -112,24 +122,37 @@ func New(opts ...Option) (*Client, error) {
 func (c *Client) read(ctx context.Context, path string, out any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.origin+path, nil)
 	if err != nil {
-		return &Error{Message: err.Error()}
+		return &Error{Message: err.Error(), Err: err}
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "nowyourlink-go/0.2 (+https://nowyourlink.com/developers)")
+	req.Header.Set("User-Agent", "nowyourlink-agent-kit-go/0.2.0 (+https://nowyourlink.com/developers)")
 	res, err := c.http.Do(req)
 	if err != nil {
-		return &Error{Message: "public API request failed: " + err.Error()}
+		return &Error{Message: "public API request failed: " + err.Error(), Err: err}
 	}
 	defer res.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+	body, err := io.ReadAll(io.LimitReader(res.Body, maxBody+1))
 	if err != nil {
-		return &Error{Message: "public API response could not be read"}
+		return &Error{Message: "public API response could not be read", Err: err}
+	}
+	if len(body) > maxBody {
+		return &Error{Message: "public API response exceeded the 1 MiB client limit"}
 	}
 	if res.StatusCode != http.StatusOK {
-		return &Error{Status: res.StatusCode, Message: fmt.Sprintf("public API returned HTTP %d; see https://nowyourlink.com/developers.md", res.StatusCode)}
+		msg := fmt.Sprintf("public API returned HTTP %d; see https://nowyourlink.com/developers.md", res.StatusCode)
+		if loc := res.Header.Get("Location"); loc != "" && res.StatusCode >= 300 && res.StatusCode < 400 {
+			msg = fmt.Sprintf("public API redirected (HTTP %d) to %s; redirects are not followed", res.StatusCode, loc)
+		}
+		var problem struct {
+			Detail string `json:"detail"`
+		}
+		if json.Unmarshal(body, &problem) == nil && problem.Detail != "" {
+			msg += ": " + problem.Detail
+		}
+		return &Error{Status: res.StatusCode, Message: msg}
 	}
 	if err := json.Unmarshal(body, out); err != nil {
-		return &Error{Message: "public API returned invalid JSON"}
+		return &Error{Message: "public API returned invalid JSON", Err: err}
 	}
 	return nil
 }

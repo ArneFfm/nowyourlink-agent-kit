@@ -76,7 +76,7 @@ var apiErr *nowyourlink.Error
 if errors.As(err, &apiErr) { log.Println(apiErr.Status, apiErr.Message) }
 ```
 
-`Current(ctx)`, `List(ctx, limit, offset)` and `Day(ctx, "2026-09-01")` return the same API envelopes as the other SDKs as typed structs. `Error.Status` retains the HTTP status, or 0 for transport/JSON failures. Options are `WithBaseURL` (HTTPS origin only) and `WithHTTPClient`; redirects are always rejected. Run `go test ./...` from the repository root.
+`Current(ctx)`, `List(ctx, limit, offset)` and `Day(ctx, "2026-09-01")` return the same API envelopes as the other SDKs as typed structs. `Error.Status` retains the HTTP status, or 0 for transport/JSON failures; `errors.Is` and `errors.As` reach the underlying cause. Options are `WithBaseURL` (HTTPS origin only) and `WithHTTPClient`; redirects are never followed. Run `go test ./...` from the kit directory.
 
 ## Python SDK
 
