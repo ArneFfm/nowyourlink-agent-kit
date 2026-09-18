@@ -60,6 +60,24 @@ The portable files follow [Agent Plugins 1.0.0](https://agent-plugins.org/specif
 
 The npm package exports TypeScript declarations and installs the `nowyourlink` executable. Its archives contain only the SDK, CLI and public agent integration files. The kit is licensed under the [MIT License](LICENSE).
 
+## Go SDK
+
+The module `github.com/ArneFfm/nowyourlink-agent-kit` (package `nowyourlink`) uses only the Go standard library and targets Go 1.22 or newer:
+
+```sh
+go get github.com/ArneFfm/nowyourlink-agent-kit@latest
+```
+
+```go
+client, err := nowyourlink.New()
+if err != nil { log.Fatal(err) }
+page, err := client.List(context.Background(), 5, 0)
+var apiErr *nowyourlink.Error
+if errors.As(err, &apiErr) { log.Println(apiErr.Status, apiErr.Message) }
+```
+
+`Current(ctx)`, `List(ctx, limit, offset)` and `Day(ctx, "2026-09-01")` return the same API envelopes as the other SDKs as typed structs. `Error.Status` retains the HTTP status, or 0 for transport/JSON failures. Options are `WithBaseURL` (HTTPS origin only) and `WithHTTPClient`; redirects are always rejected. Run `go test ./...` from the repository root.
+
 ## Python SDK
 
 Install the published package:
