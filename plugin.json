@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "nowyourlink-agent-kit",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Read current and settled nowyourlink advertising Spotlights, and advertise for a connected advertiser account over delegated OAuth.",
   "author": { "name": "nowyourlink", "url": "https://nowyourlink.com" },
   "homepage": "https://nowyourlink.com/developers",

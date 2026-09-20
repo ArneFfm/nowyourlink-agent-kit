@@ -42,6 +42,21 @@ test("parseCallback returns the code and rejects a state mismatch", () => {
     /access_denied/,
   );
   assert.throws(() => parseCallback("/callback?state=s1", "s1"), AgentError);
+  assert.equal(
+    parseCallback(
+      `/callback?code=abc&state=s1&iss=${encodeURIComponent(ISSUER)}`,
+      "s1",
+    ),
+    "abc",
+  );
+  assert.throws(
+    () =>
+      parseCallback(
+        "/callback?code=abc&state=s1&iss=https://evil.example",
+        "s1",
+      ),
+    /issuer mismatch/i,
+  );
 });
 
 test("the token store is owner-only and round-trips", async () => {
@@ -135,10 +150,7 @@ test("login uses PKCE S256 on the CIMD client and a loopback redirect", async ()
   let authorize;
   const tokens = await login({
     fetch: async (url, options) => {
-      if (String(url).includes("/oauth/authorize")) {
-        authorize = new URL(url);
-        return new Response(null, { status: 302 });
-      }
+      assert.match(String(url), /\/oauth\/token$/);
       const body = new URLSearchParams(options.body);
       assert.equal(body.get("grant_type"), "authorization_code");
       assert.equal(body.get("code"), "the-code");
@@ -157,9 +169,11 @@ test("login uses PKCE S256 on the CIMD client and a loopback redirect", async ()
     },
     log: () => {},
     open: async (url) => {
-      const target = new URL(new URL(url).searchParams.get("redirect_uri"));
+      authorize = new URL(url);
+      const target = new URL(authorize.searchParams.get("redirect_uri"));
       target.searchParams.set("code", "the-code");
-      target.searchParams.set("state", new URL(url).searchParams.get("state"));
+      target.searchParams.set("state", authorize.searchParams.get("state"));
+      target.searchParams.set("iss", ISSUER);
       await fetch(target);
     },
   });
@@ -176,46 +190,6 @@ test("login uses PKCE S256 on the CIMD client and a loopback redirect", async ()
     client_id: CLIENT_ID,
     issuer: ISSUER,
   });
-});
-
-test("a rejected loopback redirect falls back to dynamic registration", async () => {
-  const clientIds = [];
-  const opened = [];
-  let registered = 0;
-  await login({
-    fetch: async (url, options) => {
-      if (String(url).includes("/oauth/register")) {
-        registered += 1;
-        const body = JSON.parse(options.body);
-        assert.match(body.redirect_uris[0], /^http:\/\/127\.0\.0\.1:\d+\//);
-        assert.equal(body.token_endpoint_auth_method, "none");
-        return Response.json({ client_id: "dcr-client" });
-      }
-      if (String(url).includes("/oauth/authorize")) {
-        const clientId = new URL(url).searchParams.get("client_id");
-        clientIds.push(clientId);
-        return clientId === CLIENT_ID
-          ? new Response("Invalid redirect URI", { status: 400 })
-          : new Response(null, { status: 302 });
-      }
-      assert.equal(
-        new URLSearchParams(options.body).get("client_id"),
-        "dcr-client",
-      );
-      return Response.json({ access_token: "at" });
-    },
-    log: () => {},
-    open: async (url) => {
-      opened.push(new URL(url).searchParams.get("client_id"));
-      const target = new URL(new URL(url).searchParams.get("redirect_uri"));
-      target.searchParams.set("code", "c");
-      target.searchParams.set("state", new URL(url).searchParams.get("state"));
-      await fetch(target);
-    },
-  });
-  assert.equal(registered, 1);
-  assert.deepEqual(clientIds, [CLIENT_ID]);
-  assert.deepEqual(opened, ["dcr-client"]);
 });
 
 test("advertiserClient refreshes from the store and rewrites it", async () => {
@@ -253,12 +227,11 @@ test("login gives up after its deadline and releases the listener", async () => 
   await assert.rejects(
     login({
       timeoutMs: 40,
-      fetch: async (url) => {
-        redirectUri = new URL(url).searchParams.get("redirect_uri");
-        return new Response(null, { status: 302 });
-      },
+      fetch: async () => assert.fail("no token exchange without a code"),
       log: () => {},
-      open: () => {},
+      open: (url) => {
+        redirectUri = new URL(url).searchParams.get("redirect_uri");
+      },
     }),
     /timed out after 0 s/,
   );
@@ -271,9 +244,7 @@ test("a callback for another state is ignored and the login keeps waiting", asyn
   let delivered;
   const tokens = await login({
     timeoutMs: 5000,
-    fetch: async (url, options) => {
-      if (String(url).includes("/oauth/authorize"))
-        return new Response(null, { status: 302 });
+    fetch: async (_url, options) => {
       assert.equal(new URLSearchParams(options.body).get("code"), "right");
       return Response.json({ access_token: "at" });
     },
@@ -363,6 +334,147 @@ test("advertiser CLI flags accept only --name value pairs", async () => {
     ["bids", "--Day", "2026-10-01"],
     ["bids", "--day", "2026-10-01", "extra"],
     ["creative", "list", "draft"],
+  ])
+    await assert.rejects(run(args, undefined, { agent }), TypeError);
+});
+
+test("the loopback listener is closed before the token exchange", async () => {
+  let redirectUri;
+  await login({
+    fetch: async () => {
+      // The browser tab has delivered the code; the port must already be free.
+      await assert.rejects(fetch(redirectUri), TypeError);
+      return Response.json({ access_token: "at" });
+    },
+    log: () => {},
+    open: async (url) => {
+      const authorize = new URL(url).searchParams;
+      redirectUri = authorize.get("redirect_uri");
+      const target = new URL(redirectUri);
+      target.searchParams.set("code", "c");
+      target.searchParams.set("state", authorize.get("state"));
+      await fetch(target);
+    },
+  });
+});
+
+test("an error envelope and Retry-After reach AgentError", async () => {
+  const client = new AdvertiserClient({
+    accessToken: "t",
+    fetch: async () =>
+      Response.json(
+        {
+          error: {
+            code: "creative.too-large",
+            message: "The image exceeds 2 MB.",
+            retryable: false,
+          },
+        },
+        { status: 429, headers: { "retry-after": "30" } },
+      ),
+  });
+  await assert.rejects(client.listInvoices(), (error) => {
+    assert.ok(error instanceof AgentError);
+    assert.equal(error.status, 429);
+    assert.equal(error.code, "creative.too-large");
+    assert.equal(error.message, "The image exceeds 2 MB.");
+    assert.equal(error.retryAfter, 30);
+    return true;
+  });
+});
+
+test("a Retry-After date becomes seconds, and no header stays null", async () => {
+  const at = new Date(Date.now() + 120000).toUTCString();
+  const client = new AdvertiserClient({
+    accessToken: "t",
+    fetch: async (_url, options) =>
+      options.headers.accept
+        ? Response.json(
+            { code: "x" },
+            { status: 503, headers: { "retry-after": at } },
+          )
+        : null,
+  });
+  await assert.rejects(client.me(), (error) => {
+    assert.ok(Math.abs(error.retryAfter - 120) <= 1);
+    return true;
+  });
+  const plain = new AdvertiserClient({
+    accessToken: "t",
+    fetch: async () => Response.json({ code: "y" }, { status: 500 }),
+  });
+  await assert.rejects(plain.me(), (error) => {
+    assert.equal(error.retryAfter, null);
+    return true;
+  });
+});
+
+test("listBids and the CLI both insist on a day", async () => {
+  const client = new AdvertiserClient({
+    accessToken: "t",
+    fetch: () => assert.fail("network called"),
+  });
+  for (const day of [undefined, "", "2026-13-01", "2026-02-30"])
+    assert.throws(() => client.listBids(day), TypeError);
+  await assert.rejects(
+    run(["bids"], undefined, { agent: async () => client }),
+    TypeError,
+  );
+});
+
+test("a creative patch takes description or body, never both", () => {
+  const client = new AdvertiserClient({
+    accessToken: "t",
+    fetch: () => assert.fail("network called"),
+  });
+  assert.throws(
+    () => client.updateCreative("ad_1", { description: "a", body: "b" }),
+    /either description or body/,
+  );
+  assert.rejects(
+    client.uploadCreative({
+      file: new Blob(["x"]),
+      description: "a",
+      body: "b",
+    }),
+    TypeError,
+  );
+});
+
+test("a flag value may be empty but may not be the next flag", async () => {
+  const patches = [];
+  const agent = async () => ({
+    updateCreative: (id, patch) => {
+      patches.push([id, patch]);
+      return { ad_id: id };
+    },
+  });
+  await run(
+    [
+      "creative",
+      "update",
+      "ad_1",
+      "--headline",
+      "",
+      "--target-url",
+      "https://x.example",
+    ],
+    undefined,
+    { agent },
+  );
+  assert.deepEqual(patches, [
+    ["ad_1", { headline: "", targetUrl: "https://x.example" }],
+  ]);
+  for (const args of [
+    [
+      "creative",
+      "update",
+      "ad_1",
+      "--headline",
+      "--target-url",
+      "https://x.example",
+    ],
+    ["creative", "update", "ad_1", "--headline"],
   ])
     await assert.rejects(run(args, undefined, { agent }), TypeError);
 });

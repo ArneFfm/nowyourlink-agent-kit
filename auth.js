@@ -39,12 +39,18 @@ export function pkcePair() {
 /**
  * Reads the authorization response. The state check runs first: a mismatched
  * state means the response belongs to another request and its code is never
- * exchanged.
+ * exchanged. RFC 9207 `iss` is checked when the server sends it; a mismatch
+ * means a different authorization server answered and the code is discarded.
  */
-export function parseCallback(url, expectedState) {
+export function parseCallback(url, expectedState, expectedIssuer = ISSUER) {
   const query = new URL(url, "http://127.0.0.1").searchParams;
   if (query.get("state") !== expectedState)
     throw new AgentError("OAuth state mismatch. The response was discarded.");
+  const issuer = query.get("iss");
+  if (issuer !== null && issuer !== expectedIssuer)
+    throw new AgentError(
+      `OAuth issuer mismatch: ${issuer}. The response was discarded.`,
+    );
   const failure = query.get("error");
   if (failure)
     throw new AgentError(
@@ -128,50 +134,17 @@ async function postForm(url, body, fetcher) {
   return payload;
 }
 
-/**
- * RFC 7591 dynamic client registration with the loopback port this run
- * actually listens on. Only used when the CIMD client is rejected.
- */
-async function registerClient(issuer, redirectUri, fetcher) {
-  const response = await fetcher(new URL("/oauth/register", issuer), {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({
-      client_name: "nowyourlink CLI",
-      client_uri: "https://nowyourlink.com/developers",
-      redirect_uris: [redirectUri],
-      token_endpoint_auth_method: "none",
-      grant_types: ["authorization_code", "refresh_token"],
-      response_types: ["code"],
-    }),
-  });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.client_id)
-    throw new AgentError(
-      `Dynamic client registration failed with HTTP ${response.status}.`,
-      response.status,
-    );
-  return payload.client_id;
-}
-
-/**
- * Returns false when the authorization server refuses this redirect URI for
- * this client. The server answers a bad redirect locally with 400 rather than
- * redirecting to it, so the CLI can read the refusal before it opens a browser.
- */
-async function redirectAccepted(url, fetcher) {
-  const response = await fetcher(url, { redirect: "manual" });
-  if (response.status !== 400) return true;
-  return !/invalid redirect uri/i.test(await response.text().catch(() => ""));
-}
-
 function openBrowser(url) {
   // `start` is a cmd.exe builtin, not a program. Its first quoted argument is
   // the window title, so the empty string keeps the URL as the target; verbatim
   // arguments stop Node re-quoting the `&` in a query string.
   const [command, args, options] =
     process.platform === "win32"
-      ? ["cmd", ["/c", "start", "", url], { windowsVerbatimArguments: true }]
+      ? [
+          "cmd",
+          ["/c", "start", "", `"${url}"`],
+          { windowsVerbatimArguments: true },
+        ]
       : [process.platform === "darwin" ? "open" : "xdg-open", [url], {}];
   try {
     spawn(command, args, {
@@ -184,7 +157,7 @@ function openBrowser(url) {
   }
 }
 
-function startLoopback(state) {
+function startLoopback(state, issuer) {
   const server = createServer();
   const code = new Promise((resolve, reject) => {
     server.on("error", reject);
@@ -206,7 +179,7 @@ function startLoopback(state) {
       // Keep-alive sockets would otherwise hold `server.close()` open.
       const finish = () => server.closeAllConnections();
       try {
-        const value = parseCallback(request.url, state);
+        const value = parseCallback(request.url, state, issuer);
         response
           .writeHead(200, plain)
           .end("nowyourlink: authorized. You can close this tab.", finish);
@@ -259,7 +232,7 @@ export async function login({
 } = {}) {
   const pkce = pkcePair();
   const state = base64url(randomBytes(16));
-  const { server, code, listening } = startLoopback(state);
+  const { server, code, listening } = startLoopback(state, issuer);
   // The race leaves the loser pending. A handler on each side keeps Node from
   // reporting the abandoned rejection as unhandled.
   code.catch(() => {});
@@ -268,7 +241,10 @@ export async function login({
   try {
     await listening;
     const redirectUri = `http://127.0.0.1:${server.address().port}/callback`;
-    let url = authorizeUrl({
+    // RFC 8252 §7.3: the CIMD client declares a loopback redirect, so the
+    // authorization server accepts any port this run happens to get. There is
+    // no dynamic-registration fallback to write.
+    const url = authorizeUrl({
       issuer,
       clientId,
       redirectUri,
@@ -276,34 +252,27 @@ export async function login({
       state,
       pkce,
     });
-    let client = clientId;
-    if (!(await redirectAccepted(url, fetcher))) {
-      client = await registerClient(issuer, redirectUri, fetcher);
-      url = authorizeUrl({
-        issuer,
-        clientId: client,
-        redirectUri,
-        scopes,
-        state,
-        pkce,
-      });
-    }
     if (mandateHint)
       log(`Requested mandate (set it on the consent page): ${mandateHint}`);
     log(`Open this URL to authorize nowyourlink:\n${url}`);
     open(url);
+    const authorizationCode = await Promise.race([code, timeout.promise]);
+    // The listener exists for this one redirect. Close it before the token
+    // exchange so no local port stays open across a network call.
+    server.close();
+    server.closeAllConnections();
     const tokens = await postForm(
       new URL("/oauth/token", issuer),
       {
         grant_type: "authorization_code",
-        code: await Promise.race([code, timeout.promise]),
+        code: authorizationCode,
         redirect_uri: redirectUri,
-        client_id: client,
+        client_id: clientId,
         code_verifier: pkce.verifier,
       },
       fetcher,
     );
-    return { ...tokens, client_id: client, issuer };
+    return { ...tokens, client_id: clientId, issuer };
   } finally {
     timeout.clear();
     server.close();

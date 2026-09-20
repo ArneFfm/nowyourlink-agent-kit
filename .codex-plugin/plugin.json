@@ -1,6 +1,6 @@
 {
   "name": "nowyourlink-agent-kit",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Read public nowyourlink Spotlights and integration documentation, and advertise over delegated OAuth.",
   "author": {
     "name": "nowyourlink"

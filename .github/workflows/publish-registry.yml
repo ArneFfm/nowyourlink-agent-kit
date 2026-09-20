@@ -16,3 +16,4 @@ jobs:
       - run: mcp-publisher login github-oidc
       - run: mcp-publisher publish server.json
       - run: mcp-publisher publish server-docs.json
+      - run: mcp-publisher publish server-advertiser.json

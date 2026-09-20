@@ -2,9 +2,9 @@
 
 [![skills.sh](https://skills.sh/b/arneffm/nowyourlink-agent-kit)](https://skills.sh/arneffm/nowyourlink-agent-kit)
 
-Read the current nowyourlink advertising Spotlight and browse published, settled days. This standalone kit contains an official product skill, portable agent plugin, Codex compatibility manifest, and dependency-free JavaScript SDK and CLI, plus a Python standard-library SDK. It requires no account or API key.
+Read the current nowyourlink advertising Spotlight and browse published, settled days. This standalone kit contains an official product skill, portable agent plugin, Codex compatibility manifest, and dependency-free JavaScript SDK and CLI, plus a Python standard-library SDK. Public Spotlight reads need no account or API key. Advertiser actions (bids, creatives, invoices) are delegated: they need an OAuth 2.1 grant that a human advertiser approves, with the spend mandate set on the consent page.
 
-**Distribution status:** SDKs and CLI published. The public source repository is [ArneFfm/nowyourlink-agent-kit](https://github.com/ArneFfm/nowyourlink-agent-kit). Python SDK and CLI 0.2.0 are published on [PyPI](https://pypi.org/project/nowyourlink-spotlights/). JavaScript SDK and CLI 0.2.2 are published on [npm](https://www.npmjs.com/package/nowyourlink-agent-kit). Install with `npm install nowyourlink-agent-kit`, or run `npx nowyourlink-agent-kit list --limit 5`.
+**Distribution status:** SDKs and CLI published. The public source repository is [ArneFfm/nowyourlink-agent-kit](https://github.com/ArneFfm/nowyourlink-agent-kit). Python SDK and CLI 0.2.0 are published on [PyPI](https://pypi.org/project/nowyourlink-spotlights/). JavaScript SDK and CLI 0.3.0 are published on [npm](https://www.npmjs.com/package/nowyourlink-agent-kit). Install with `npm install nowyourlink-agent-kit`, or run `npx nowyourlink-agent-kit list --limit 5`.
 
 ## MCP registry
 
@@ -64,7 +64,7 @@ node cli.js invoices
 node cli.js logout
 ```
 
-`login` runs the authorization-code flow with PKCE (S256) and an RFC 8252 loopback redirect: it starts a listener on `http://127.0.0.1:<random port>/callback`, opens your browser and prints the URL as a fallback. The client is a Client ID Metadata Document at `https://nowyourlink.com/.well-known/nowyourlink-cli-client.json`; if the authorization server refuses that loopback port, `login` registers dynamically at `/oauth/register` with the port in use and retries. Tokens are written to `~/.config/nowyourlink/token.json` with mode 0600, and a 401 refreshes them once.
+`login` runs the authorization-code flow with PKCE (S256) and an RFC 8252 loopback redirect: it starts a listener on `http://127.0.0.1:<random port>/callback`, opens your browser and prints the URL as a fallback. The client is a Client ID Metadata Document at `https://nowyourlink.com/.well-known/nowyourlink-cli-client.json`. RFC 8252 §7.3 lets the authorization server accept any loopback port, so there is no dynamic-registration fallback. The listener closes as soon as the browser delivers the code, and an RFC 9207 `iss` that does not match the issuer rejects the response. Tokens are written to `~/.config/nowyourlink/token.json` with mode 0600, and a 401 refreshes them once.
 
 The spend mandate is chosen by the human on the consent page. `--mandate` only prints the amount you want to request; it is not a protocol parameter and grants nothing.
 
@@ -77,7 +77,7 @@ const key = newIdempotencyKey();
 await api.placeBid({ day: '2026-10-01', adId: 'ad_123', amountCents: 2500, idempotencyKey: key });
 ```
 
-`AdvertiserClient` methods: `me()`, `listBids(day)`, `placeBid()`, `increaseBid(bidId, bid)`, `listCreatives()`, `getCreative(id)`, `uploadCreative()`, `updateCreative(id, patch)`, `submitCreative(id)`, `listInvoices()`. Bids need an `idempotencyKey`; the SDK never invents one, so a retry with the same key is a replay and not a second bid. Failures raise `AgentError` carrying the HTTP status and the `application/problem+json` `code`. `sdk.js` stays free of `node:` imports; `auth.js` is Node.js only.
+`AdvertiserClient` methods: `me()`, `listBids(day)`, `placeBid()`, `increaseBid(bidId, bid)`, `listCreatives()`, `getCreative(id)`, `uploadCreative()`, `updateCreative(id, patch)`, `submitCreative(id)`, `listInvoices()`. Bids need an `idempotencyKey`; the SDK never invents one, so a retry with the same key is a replay and not a second bid. Failures raise `AgentError` carrying the HTTP status, the error code (from `application/problem+json` or the `{ error: { code, message } }` envelope) and `retryAfter` in seconds when the response sent `Retry-After`. `sdk.js` stays free of `node:` imports; `auth.js` is Node.js only.
 
 ## Install the agent skill
 
@@ -93,7 +93,7 @@ To inspect discovery without installing, run `npx skills add ArneFfm/nowyourlink
 
 ## Agent clients
 
-Load this directory using your client's local plugin mechanism. Portable clients discover root `plugin.json`, `mcp.json` and the skills under `skills/`. Codex compatibility files are `.codex-plugin/plugin.json` and `.mcp.json`. Both connect to the same public `https://nowyourlink.com/mcp` endpoint; transport names intentionally follow their respective formats. No client installation or marketplace registration is performed by this kit.
+Load this directory using your client's local plugin mechanism. Portable clients discover root `plugin.json`, `mcp.json` and the skills under `skills/`. Codex compatibility files are `.codex-plugin/plugin.json` and `.mcp.json`. Three MCP servers are described: the public Spotlight server `https://nowyourlink.com/mcp`, the documentation server `https://nowyourlink.com/mcp/docs`, and the advertiser server `https://api.nowyourlink.com/mcp`, which needs a delegated OAuth 2.1 token. Transport names intentionally follow their respective formats. No client installation or marketplace registration is performed by this kit.
 
 The portable files follow [Agent Plugins 1.0.0](https://agent-plugins.org/specification), and the skill follows [Agent Skills](https://agentskills.io/specification). Product API details: [developer documentation](https://nowyourlink.com/developers), [OpenAPI](https://nowyourlink.com/openapi.json).
 

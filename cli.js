@@ -31,9 +31,17 @@ function flags(rest, allowed) {
     // with a stray or misplaced argument, which must not be read as a flag.
     if (!/^--[a-z][a-z-]*$/.test(token ?? "")) throw new TypeError(usage);
     const key = token.slice(2);
-    if (!allowed.includes(key) || Object.hasOwn(options, key) || !rest[i + 1])
+    const value = rest[i + 1];
+    // An explicit empty value is legitimate (`--headline ""` clears the copy),
+    // but a missing one, or the next flag read as a value, is a typing error.
+    if (
+      !allowed.includes(key) ||
+      Object.hasOwn(options, key) ||
+      value === undefined ||
+      value.startsWith("--")
+    )
       throw new TypeError(usage);
-    options[key] = rest[i + 1];
+    options[key] = value;
   }
   return options;
 }
@@ -89,6 +97,7 @@ export async function run(args, client = new SpotlightClient(), deps = {}) {
     return (await agent()).listInvoices();
   if (command === "bids") {
     const options = flags(rest, ["day"]);
+    if (options.day === undefined) throw new TypeError(usage);
     return (await agent()).listBids(options.day);
   }
   if (command === "bid") {

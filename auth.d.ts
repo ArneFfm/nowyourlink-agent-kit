@@ -13,7 +13,11 @@ export interface Tokens {
   issuer?: string;
 }
 export function pkcePair(): { verifier: string; challenge: string };
-export function parseCallback(url: string, expectedState: string): string;
+export function parseCallback(
+  url: string,
+  expectedState: string,
+  expectedIssuer?: string,
+): string;
 export function tokenFile(): string;
 export function saveTokens(tokens: Tokens, file?: string): Promise<string>;
 export function loadTokens(file?: string): Promise<Tokens | null>;

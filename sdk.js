@@ -12,6 +12,18 @@ function integer(value, name, min, max) {
   return value;
 }
 
+/** A calendar date the API addresses a day by. */
+function dayString(day) {
+  if (
+    typeof day !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
+    !Number.isFinite(Date.parse(`${day}T00:00:00Z`)) ||
+    new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) !== day
+  )
+    throw new TypeError("day must be a valid YYYY-MM-DD date.");
+  return day;
+}
+
 /** Public, anonymous reads only. Node.js 22+ or a browser with native fetch. */
 export class SpotlightClient {
   constructor({
@@ -80,25 +92,35 @@ export class SpotlightClient {
   }
 
   day(day) {
-    if (
-      typeof day !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
-      !Number.isFinite(Date.parse(`${day}T00:00:00Z`)) ||
-      new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) !== day
-    )
-      throw new TypeError("day must be a valid YYYY-MM-DD date.");
-    return this.#read(`/api/v1/spotlights/${day}`);
+    return this.#read(`/api/v1/spotlights/${dayString(day)}`);
   }
 }
 
-/** An advertiser API failure. `code` is the problem+json `code` member. */
+/**
+ * An advertiser API failure. `code` is the machine-readable error code, from
+ * the problem+json `code` member or the `{ error: { code, message } }`
+ * envelope the creative routes return. `retryAfter` is the `Retry-After`
+ * delay in seconds, or null when the response carried none.
+ */
 export class AgentError extends Error {
-  constructor(message, status = 0, code = null) {
+  constructor(message, status = 0, code = null, retryAfter = null) {
     super(message);
     this.name = "AgentError";
     this.status = status;
     this.code = code;
+    this.retryAfter = retryAfter;
   }
+}
+
+/** `Retry-After` is either a delay in seconds or an HTTP date. */
+function retryAfterSeconds(response) {
+  const header = response.headers?.get?.("retry-after");
+  if (!header) return null;
+  if (/^\d+$/.test(header.trim())) return Number(header.trim());
+  const at = Date.parse(header);
+  return Number.isFinite(at)
+    ? Math.max(0, Math.round((at - Date.now()) / 1000))
+    : null;
 }
 
 const CREATIVE_FIELDS = {
@@ -112,6 +134,8 @@ const CREATIVE_FIELDS = {
 };
 
 function creativeBody(patch) {
+  if (patch.description !== undefined && patch.body !== undefined)
+    throw new TypeError("Pass either description or body, not both.");
   const body = {};
   for (const [key, value] of Object.entries(patch)) {
     const field = CREATIVE_FIELDS[key];
@@ -173,9 +197,11 @@ export class AdvertiserClient {
       throw new AgentError(
         payload?.detail ??
           payload?.title ??
+          payload?.error?.message ??
           `Advertiser API returned HTTP ${response.status}.`,
         response.status,
-        payload?.code ?? null,
+        payload?.code ?? payload?.error?.code ?? null,
+        retryAfterSeconds(response),
       );
     return payload;
   }
@@ -194,7 +220,7 @@ export class AdvertiserClient {
   listBids(day) {
     return this.#send(
       "GET",
-      `/v1/agent/bids?day=${encodeURIComponent(day ?? "")}`,
+      `/v1/agent/bids?day=${encodeURIComponent(dayString(day))}`,
     );
   }
 
@@ -251,6 +277,7 @@ export class AdvertiserClient {
       if (new URL(url).protocol !== "https:")
         throw new TypeError("url must be HTTPS.");
       const source = await this.fetch(url, {
+        credentials: "omit",
         redirect: "error",
         signal: AbortSignal.timeout(this.timeoutMs),
       });
@@ -258,6 +285,8 @@ export class AdvertiserClient {
         throw new AgentError(
           `Creative source returned HTTP ${source.status}.`,
           source.status,
+          null,
+          retryAfterSeconds(source),
         );
       blob = await source.blob();
     }

@@ -8,7 +8,7 @@ metadata:
 
 # Integrate the nowyourlink public API
 
-Use this skill when a developer wants to add nowyourlink Spotlight reads to an application, script or agent configuration. Everything below is anonymous and read-only; no API key exists.
+Use this skill when a developer wants to add nowyourlink Spotlight reads to an application, script or agent configuration. Everything below is anonymous and read-only.
 
 ## Pick the integration path
 
@@ -33,4 +33,4 @@ Use this skill when a developer wants to add nowyourlink Spotlight reads to an a
 
 Run one call that returns the current Spotlight and one archive page, then confirm your client handles a 404 for a past date such as `2020-01-01`. Documentation for humans: `https://nowyourlink.com/developers`. Machine index: `https://nowyourlink.com/llms.txt`.
 
-This kit cannot bid, upload creatives or charge advertisers. Those actions require a signed-in advertiser account on the website.
+Advertiser actions (bids, creatives, invoices) are a separate, delegated path: see the `advertise-on-nowyourlink` skill.

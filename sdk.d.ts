@@ -32,9 +32,15 @@ export class SpotlightClient {
   day(day: string): Promise<SpotlightResponse>;
 }
 export class AgentError extends Error {
-  constructor(message: string, status?: number, code?: string | null);
+  constructor(
+    message: string,
+    status?: number,
+    code?: string | null,
+    retryAfter?: number | null,
+  );
   status: number;
   code: string | null;
+  retryAfter: number | null;
 }
 export interface AdvertiserClientOptions {
   baseUrl?: string;
