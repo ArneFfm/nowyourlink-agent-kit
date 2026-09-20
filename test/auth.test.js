@@ -8,6 +8,7 @@ import {
   advertiserClient,
   CLIENT_ID,
   ISSUER,
+  LOGIN_TIMEOUT_MS,
   loadTokens,
   login,
   parseCallback,
@@ -15,6 +16,7 @@ import {
   saveTokens,
   tokenFile,
 } from "../auth.js";
+import { run } from "../cli.js";
 import { AdvertiserClient, AgentError } from "../sdk.js";
 
 const base64url = (buffer) => buffer.toString("base64url");
@@ -243,4 +245,124 @@ test("advertiserClient refreshes from the store and rewrites it", async () => {
     refresh_token: "rt2",
     issuer: ISSUER,
   });
+});
+
+test("login gives up after its deadline and releases the listener", async () => {
+  assert.equal(LOGIN_TIMEOUT_MS, 300000);
+  let redirectUri;
+  await assert.rejects(
+    login({
+      timeoutMs: 40,
+      fetch: async (url) => {
+        redirectUri = new URL(url).searchParams.get("redirect_uri");
+        return new Response(null, { status: 302 });
+      },
+      log: () => {},
+      open: () => {},
+    }),
+    /timed out after 0 s/,
+  );
+  // The port is free again: the listener was closed, not merely abandoned.
+  await assert.rejects(fetch(redirectUri), TypeError);
+});
+
+test("a callback for another state is ignored and the login keeps waiting", async () => {
+  const answers = [];
+  let delivered;
+  const tokens = await login({
+    timeoutMs: 5000,
+    fetch: async (url, options) => {
+      if (String(url).includes("/oauth/authorize"))
+        return new Response(null, { status: 302 });
+      assert.equal(new URLSearchParams(options.body).get("code"), "right");
+      return Response.json({ access_token: "at" });
+    },
+    log: () => {},
+    open: (url) => {
+      const authorize = new URL(url).searchParams;
+      const base = new URL(authorize.get("redirect_uri"));
+      const hit = async (path, search) => {
+        const target = new URL(base);
+        target.pathname = path;
+        target.search = search;
+        answers.push((await fetch(target)).status);
+      };
+      // A different path, then a stray state, then the real response. Only the
+      // last one may end the login.
+      delivered = (async () => {
+        await hit("/callbackx", "");
+        await hit("/callback", "code=wrong&state=someone-else");
+        await hit("/callback", `code=right&state=${authorize.get("state")}`);
+      })();
+    },
+  });
+  await delivered;
+  assert.deepEqual(answers, [404, 204, 200]);
+  assert.equal(tokens.access_token, "at");
+});
+
+test("a rotated refresh token is the one the next refresh sends", async () => {
+  const file = join(await mkdtemp(join(tmpdir(), "nyl-")), "token.json");
+  await saveTokens({ access_token: "t0", refresh_token: "r0" }, file);
+  const sent = [];
+  let issued = 0;
+  let reads = 0;
+  const client = await advertiserClient({
+    file,
+    fetch: async (url, options) => {
+      if (String(url).includes("/oauth/token")) {
+        sent.push(new URLSearchParams(options.body).get("refresh_token"));
+        issued += 1;
+        return Response.json({
+          access_token: `t${issued}`,
+          refresh_token: `r${issued}`,
+        });
+      }
+      // Every first attempt is stale, so both calls refresh. The second must
+      // not replay the refresh token the first one already spent.
+      reads += 1;
+      return reads % 2 === 1
+        ? Response.json({ code: "expired" }, { status: 401 })
+        : Response.json({ token: options.headers.authorization });
+    },
+  });
+  assert.deepEqual(await client.me(), { token: "Bearer t1" });
+  assert.deepEqual(await client.listInvoices(), { token: "Bearer t2" });
+  assert.deepEqual(sent, ["r0", "r1"]);
+  assert.deepEqual(await loadTokens(file), {
+    access_token: "t2",
+    refresh_token: "r2",
+  });
+});
+
+test("advertiser CLI flags accept only --name value pairs", async () => {
+  const calls = [];
+  const agent = async () => ({
+    listBids: (day) => {
+      calls.push(day);
+      return { bids: [] };
+    },
+    listCreatives: (options) => {
+      calls.push(options);
+      return { ads: [], cursor: null };
+    },
+  });
+  assert.deepEqual(
+    await run(["bids", "--day", "2026-10-01"], undefined, { agent }),
+    {
+      bids: [],
+    },
+  );
+  assert.deepEqual(calls, ["2026-10-01"]);
+  for (const args of [
+    ["bids", "day", "2026-10-01"],
+    ["bids", "--day"],
+    ["bids", "--day", "2026-10-01", "--day", "2026-10-02"],
+    ["bids", "--unknown", "x"],
+    ["bids", "-d", "2026-10-01"],
+    ["bids", "--Day", "2026-10-01"],
+    ["bids", "--day", "2026-10-01", "extra"],
+    ["creative", "list", "draft"],
+  ])
+    await assert.rejects(run(args, undefined, { agent }), TypeError);
 });

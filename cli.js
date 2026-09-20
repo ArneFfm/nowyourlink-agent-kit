@@ -26,7 +26,11 @@ export const usage = `Usage:
 function flags(rest, allowed) {
   const options = {};
   for (let i = 0; i < rest.length; i += 2) {
-    const key = rest[i]?.slice(2);
+    const token = rest[i];
+    // Only a `--name value` pair. A bare word here means the command was typed
+    // with a stray or misplaced argument, which must not be read as a flag.
+    if (!/^--[a-z][a-z-]*$/.test(token ?? "")) throw new TypeError(usage);
+    const key = token.slice(2);
     if (!allowed.includes(key) || Object.hasOwn(options, key) || !rest[i + 1])
       throw new TypeError(usage);
     options[key] = rest[i + 1];

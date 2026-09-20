@@ -243,9 +243,17 @@ export class AdvertiserClient {
    * is a Blob (the CLI reads a path and wraps it); `url` is fetched first.
    */
   async uploadCreative({ file, url, filename = "creative", ...copy }) {
+    // Build the patch first: a rejected copy field must fail before the upload
+    // creates a draft that would then be left without its copy.
+    const patch = creativeBody(copy);
     let blob = file;
     if (!blob && url) {
-      const source = await this.fetch(url, { redirect: "error" });
+      if (new URL(url).protocol !== "https:")
+        throw new TypeError("url must be HTTPS.");
+      const source = await this.fetch(url, {
+        redirect: "error",
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
       if (!source.ok)
         throw new AgentError(
           `Creative source returned HTTP ${source.status}.`,
@@ -259,9 +267,12 @@ export class AdvertiserClient {
     const uploaded = await this.#send("POST", "/v1/agent/creatives/upload", {
       body: form,
     });
-    const patch = creativeBody(copy);
     if (Object.keys(patch).length)
-      await this.updateCreative(uploaded.ad_id, copy);
+      await this.#json(
+        "PATCH",
+        `/v1/agent/creatives/${encodeURIComponent(uploaded.ad_id)}`,
+        patch,
+      );
     return uploaded;
   }
 

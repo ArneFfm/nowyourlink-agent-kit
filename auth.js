@@ -65,9 +65,15 @@ export function tokenFile() {
   return join(base, "nowyourlink", "token.json");
 }
 
-/** Owner-only (0600): the file holds a bearer token and a refresh token. */
+/**
+ * Owner-only: the file holds a bearer token and a refresh token. `mkdir` and
+ * `writeFile` mask their mode with the umask, and neither narrows a path that
+ * already exists, so both are chmod-ed after the fact.
+ */
 export async function saveTokens(tokens, file = tokenFile()) {
-  await mkdir(join(file, ".."), { recursive: true, mode: 0o700 });
+  const directory = join(file, "..");
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  await chmod(directory, 0o700);
   await writeFile(file, `${JSON.stringify(tokens, null, 2)}\n`, {
     mode: 0o600,
   });
@@ -160,17 +166,18 @@ async function redirectAccepted(url, fetcher) {
 }
 
 function openBrowser(url) {
-  const command =
-    process.platform === "darwin"
-      ? "open"
-      : process.platform === "win32"
-        ? "start"
-        : "xdg-open";
+  // `start` is a cmd.exe builtin, not a program. Its first quoted argument is
+  // the window title, so the empty string keeps the URL as the target; verbatim
+  // arguments stop Node re-quoting the `&` in a query string.
+  const [command, args, options] =
+    process.platform === "win32"
+      ? ["cmd", ["/c", "start", "", url], { windowsVerbatimArguments: true }]
+      : [process.platform === "darwin" ? "open" : "xdg-open", [url], {}];
   try {
-    spawn(command, [url], {
+    spawn(command, args, {
       stdio: "ignore",
       detached: true,
-      shell: process.platform === "win32",
+      ...options,
     }).unref();
   } catch {
     // The printed URL is the fallback; a missing opener is not a failure.
@@ -182,20 +189,30 @@ function startLoopback(state) {
   const code = new Promise((resolve, reject) => {
     server.on("error", reject);
     server.on("request", (request, response) => {
-      if (!request.url.startsWith("/callback")) {
+      const target = new URL(request.url, "http://127.0.0.1");
+      if (target.pathname !== "/callback") {
         response.writeHead(404).end();
         return;
       }
+      // A response for another state belongs to another authorization request.
+      // Answering 204 and staying open means a stray or forged hit cannot end
+      // the login the user is waiting on.
+      if (target.searchParams.get("state") !== state) {
+        response.writeHead(204).end();
+        return;
+      }
+      const plain = { "content-type": "text/plain; charset=utf-8" };
+      // The browser has delivered the only request this listener exists for.
+      // Keep-alive sockets would otherwise hold `server.close()` open.
+      const finish = () => server.closeAllConnections();
       try {
         const value = parseCallback(request.url, state);
         response
-          .writeHead(200, { "content-type": "text/plain; charset=utf-8" })
-          .end("nowyourlink: authorized. You can close this tab.");
+          .writeHead(200, plain)
+          .end("nowyourlink: authorized. You can close this tab.", finish);
         resolve(value);
       } catch (error) {
-        response
-          .writeHead(400, { "content-type": "text/plain; charset=utf-8" })
-          .end(error.message);
+        response.writeHead(400, plain).end(error.message, finish);
         reject(error);
       }
     });
@@ -204,6 +221,25 @@ function startLoopback(state) {
     server.listen(0, "127.0.0.1", resolve),
   );
   return { server, code, listening };
+}
+
+/** An unfinished browser flow must not hold the process open for ever. */
+export const LOGIN_TIMEOUT_MS = 5 * 60 * 1000;
+
+function deadline(ms) {
+  let timer;
+  const promise = new Promise((_resolve, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new AgentError(
+            `Authorization timed out after ${Math.round(ms / 1000)} s.`,
+          ),
+        ),
+      ms,
+    );
+  });
+  return { promise, clear: () => clearTimeout(timer) };
 }
 
 /**
@@ -219,10 +255,16 @@ export async function login({
   fetch: fetcher = globalThis.fetch,
   open = openBrowser,
   log = (line) => process.stderr.write(`${line}\n`),
+  timeoutMs = LOGIN_TIMEOUT_MS,
 } = {}) {
   const pkce = pkcePair();
   const state = base64url(randomBytes(16));
   const { server, code, listening } = startLoopback(state);
+  // The race leaves the loser pending. A handler on each side keeps Node from
+  // reporting the abandoned rejection as unhandled.
+  code.catch(() => {});
+  const timeout = deadline(timeoutMs);
+  timeout.promise.catch(() => {});
   try {
     await listening;
     const redirectUri = `http://127.0.0.1:${server.address().port}/callback`;
@@ -254,7 +296,7 @@ export async function login({
       new URL("/oauth/token", issuer),
       {
         grant_type: "authorization_code",
-        code: await code,
+        code: await Promise.race([code, timeout.promise]),
         redirect_uri: redirectUri,
         client_id: client,
         code_verifier: pkce.verifier,
@@ -263,7 +305,9 @@ export async function login({
     );
     return { ...tokens, client_id: client, issuer };
   } finally {
+    timeout.clear();
     server.close();
+    server.closeAllConnections();
   }
 }
 
@@ -291,7 +335,7 @@ export function refreshTokens({
  */
 export async function advertiserClient(options = {}) {
   const file = options.file ?? tokenFile();
-  const stored = await loadTokens(file);
+  let stored = await loadTokens(file);
   if (!stored?.access_token)
     throw new AgentError("Not logged in. Run `nowyourlink login` first.");
   return new AdvertiserClient({
@@ -305,9 +349,11 @@ export async function advertiserClient(options = {}) {
         issuer: stored.issuer ?? ISSUER,
         fetch: options.fetch ?? globalThis.fetch,
       });
-      const merged = { ...stored, ...next };
-      await saveTokens(merged, file);
-      return merged.access_token;
+      // Reassign: an authorization server that rotates refresh tokens
+      // invalidates the old one, so a second refresh must use the new value.
+      stored = { ...stored, ...next };
+      await saveTokens(stored, file);
+      return stored.access_token;
     },
   });
 }

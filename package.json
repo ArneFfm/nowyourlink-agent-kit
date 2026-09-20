@@ -1,7 +1,7 @@
 {
   "name": "nowyourlink-agent-kit",
   "version": "0.3.0",
-  "description": "Dependency-free client, CLI and agent plugin for public nowyourlink Spotlights.",
+  "description": "Dependency-free client, CLI and agent plugin for public nowyourlink Spotlights, with an OAuth 2.1 advertiser client for delegated bids, creatives and invoices.",
   "homepage": "https://nowyourlink.com",
   "type": "module",
   "exports": {
