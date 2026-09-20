@@ -8,6 +8,10 @@
     "nowyourlink-docs": {
       "type": "streamable-http",
       "url": "https://nowyourlink.com/mcp/docs"
+    },
+    "nowyourlink-advertiser": {
+      "type": "streamable-http",
+      "url": "https://api.nowyourlink.com/mcp"
     }
   }
 }

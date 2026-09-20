@@ -81,7 +81,7 @@ await api.placeBid({ day: '2026-10-01', adId: 'ad_123', amountCents: 2500, idemp
 
 ## Install the agent skill
 
-Three skills live under `skills/`: `read-spotlights` (current and dated lookups), `browse-spotlight-archive` (cursor and batch archive reads) and `integrate-nowyourlink-api` (SDK, CLI, OpenAPI and MCP setup). Install them from this public repository using the [skills CLI](https://skills.sh/docs/cli):
+Four skills live under `skills/`: `read-spotlights` (current and dated lookups), `browse-spotlight-archive` (cursor and batch archive reads), `integrate-nowyourlink-api` (SDK, CLI, OpenAPI and MCP setup) and `advertise-on-nowyourlink` (bids, creatives and invoices over the delegated OAuth advertiser server). Install them from this public repository using the [skills CLI](https://skills.sh/docs/cli):
 
 ```sh
 npx skills add ArneFfm/nowyourlink-agent-kit
