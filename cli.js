@@ -17,10 +17,18 @@ export const usage = `Usage:
   nowyourlink login [--scope "a b"] [--mandate "50 EUR/day"] | logout | me
   nowyourlink bid --day YYYY-MM-DD --ad AD_ID --amount CENTS [--bid BID_ID] [--key KEY]
   nowyourlink bids --day YYYY-MM-DD
-  nowyourlink creative list [--state draft] | upload FILE [--headline T] [--description T] [--target-url URL]
-  nowyourlink creative update AD_ID [--headline T] [--description T] [--target-url URL]
+  nowyourlink creative list [--state draft]
+  nowyourlink creative upload FILE [COPY]
+  nowyourlink creative update AD_ID [COPY]
   nowyourlink creative submit AD_ID
-  nowyourlink invoices`;
+  nowyourlink invoices
+
+COPY: [--headline T] [--description T] [--target-url URL] [--display-url T]
+      [--cta LABEL]
+CTA LABEL: learn-more | shop-now | sign-up | book | download | contact
+
+Submit needs all of headline, description, target URL, CTA and the uploaded
+creative; the API answers 422 ads.incomplete while one is missing.`;
 
 /** Parses `--flag value` pairs; every advertiser command uses this shape. */
 function flags(rest, allowed) {
@@ -46,12 +54,19 @@ function flags(rest, allowed) {
   return options;
 }
 
+/** CLI flag name -> `creativeBody` field. */
+const COPY_FLAGS = {
+  headline: "headline",
+  description: "description",
+  "target-url": "targetUrl",
+  "display-url": "displayUrl",
+  cta: "ctaLabel",
+};
+
 function copyOf(options) {
   const copy = {};
-  if (options.headline !== undefined) copy.headline = options.headline;
-  if (options.description !== undefined) copy.description = options.description;
-  if (options["target-url"] !== undefined)
-    copy.targetUrl = options["target-url"];
+  for (const [flag, field] of Object.entries(COPY_FLAGS))
+    if (options[flag] !== undefined) copy[field] = options[flag];
   return copy;
 }
 
@@ -61,6 +76,7 @@ async function fileBlob(path) {
 
 export async function run(args, client = new SpotlightClient(), deps = {}) {
   const agent = deps.agent ?? advertiserClient;
+  const log = deps.log ?? ((line) => process.stderr.write(`${line}\n`));
   const [command, ...rest] = args;
   if (command === "--help" && rest.length === 0) return usage;
   if (command === "current" && rest.length === 0) return client.current();
@@ -110,7 +126,19 @@ export async function run(args, client = new SpotlightClient(), deps = {}) {
     };
     if (!Number.isInteger(bid.amountCents)) throw new TypeError(usage);
     const api = await agent();
-    return options.bid ? api.increaseBid(options.bid, bid) : api.placeBid(bid);
+    // The key is the only safe retry. Print it before the request, because a
+    // crash or a timeout leaves the caller with nothing else to reuse, and
+    // again after a failure so it stays next to the error.
+    const note = `idempotency key: ${bid.idempotencyKey} — reuse with --key on retry`;
+    log(note);
+    try {
+      return await (options.bid
+        ? api.increaseBid(options.bid, bid)
+        : api.placeBid(bid));
+    } catch (error) {
+      log(note);
+      throw error;
+    }
   }
   if (command === "creative") {
     const [action, ...tail] = rest;
@@ -120,7 +148,7 @@ export async function run(args, client = new SpotlightClient(), deps = {}) {
       return (await agent()).submitCreative(tail[0]);
     if (action === "upload" && tail.length >= 1) {
       const [path, ...pairs] = tail;
-      const options = flags(pairs, ["headline", "description", "target-url"]);
+      const options = flags(pairs, Object.keys(COPY_FLAGS));
       const { blob, filename } = await fileBlob(path);
       return (await agent()).uploadCreative({
         file: blob,
@@ -130,7 +158,7 @@ export async function run(args, client = new SpotlightClient(), deps = {}) {
     }
     if (action === "update" && tail.length >= 3) {
       const [id, ...pairs] = tail;
-      const options = flags(pairs, ["headline", "description", "target-url"]);
+      const options = flags(pairs, Object.keys(COPY_FLAGS));
       return (await agent()).updateCreative(id, copyOf(options));
     }
   }

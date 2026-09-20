@@ -16,7 +16,7 @@ import {
   saveTokens,
   tokenFile,
 } from "../auth.js";
-import { run } from "../cli.js";
+import { run, usage } from "../cli.js";
 import { AdvertiserClient, AgentError } from "../sdk.js";
 
 const base64url = (buffer) => buffer.toString("base64url");
@@ -477,4 +477,105 @@ test("a flag value may be empty but may not be the next flag", async () => {
     ["creative", "update", "ad_1", "--headline"],
   ])
     await assert.rejects(run(args, undefined, { agent }), TypeError);
+});
+
+test("creative copy flags cover the CTA and the display URL", async () => {
+  const patches = [];
+  const agent = async () => ({
+    updateCreative: (id, patch) => {
+      patches.push(patch);
+      return { ad_id: id };
+    },
+  });
+  await run(
+    [
+      "creative",
+      "update",
+      "ad_1",
+      "--headline",
+      "Try it",
+      "--description",
+      "Short copy",
+      "--target-url",
+      "https://example.com",
+      "--display-url",
+      "example.com",
+      "--cta",
+      "learn-more",
+    ],
+    undefined,
+    { agent },
+  );
+  assert.deepEqual(patches, [
+    {
+      headline: "Try it",
+      description: "Short copy",
+      targetUrl: "https://example.com",
+      displayUrl: "example.com",
+      ctaLabel: "learn-more",
+    },
+  ]);
+  // The API enum, reproduced in the help so the agent need not guess.
+  for (const label of [
+    "learn-more",
+    "shop-now",
+    "sign-up",
+    "book",
+    "download",
+    "contact",
+  ])
+    assert.ok(usage.includes(label));
+});
+
+test("bid prints its idempotency key before sending and after a failure", async () => {
+  const lines = [];
+  const log = (line) => lines.push(line);
+  const placed = [];
+  const ok = async () => ({
+    placeBid: (bid) => {
+      placed.push(bid);
+      return { bid_id: "b1" };
+    },
+  });
+  await run(
+    ["bid", "--day", "2026-10-01", "--ad", "ad_1", "--amount", "2500"],
+    undefined,
+    { agent: ok, log },
+  );
+  const key = placed[0].idempotencyKey;
+  assert.match(key, /^[0-9a-f-]{36}$/);
+  assert.deepEqual(lines, [
+    `idempotency key: ${key} — reuse with --key on retry`,
+  ]);
+
+  lines.length = 0;
+  const failing = async () => ({
+    increaseBid: () => {
+      throw new AgentError("Bid rejected.", 409, "bids.too-low");
+    },
+  });
+  await assert.rejects(
+    run(
+      [
+        "bid",
+        "--day",
+        "2026-10-01",
+        "--ad",
+        "ad_1",
+        "--amount",
+        "2500",
+        "--bid",
+        "b1",
+        "--key",
+        "key-7",
+      ],
+      undefined,
+      { agent: failing, log },
+    ),
+    /Bid rejected/,
+  );
+  assert.deepEqual(lines, [
+    "idempotency key: key-7 — reuse with --key on retry",
+    "idempotency key: key-7 — reuse with --key on retry",
+  ]);
 });

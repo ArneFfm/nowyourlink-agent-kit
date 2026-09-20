@@ -36,9 +36,9 @@ The advertiser server is `https://api.nowyourlink.com/mcp`. It is a different se
 2. Stop if `eligibility` is not ok. Report each reason and the `action_url` to the human. The human completes that step in the browser.
 3. Call `list_creatives`. Use an approved creative if one fits the request.
 4. Call `sandbox_upload_creative` before an upload. It returns a moderation preflight verdict: `pass`, `review`, `block` or `unavailable`, with the signals behind it. Fix the copy on `block` and call it again.
-5. Call `upload_creative` with the public https image URL, the headline, the description and the target URL. The image must be JPEG, PNG, WebP or GIF, and 10 MB or smaller.
+5. Call `upload_creative` with the public https image URL, the headline, the description, the target URL and the CTA label. The label is one of `learn-more`, `shop-now`, `sign-up`, `book`, `download`, `contact`. The image must be JPEG, PNG, WebP or GIF, and 10 MB or smaller.
 6. Call `update_creative` to repair a refused headline, description or target URL. Never upload the image again for a copy error.
-7. Call `submit_creative`. It runs the same preflight and refuses a blocked copy with `422`.
+7. Call `submit_creative`. It needs the headline, the description, the target URL, the CTA label and the image; a missing one answers `422` `ads.incomplete` and names it. It runs the same preflight and refuses a blocked copy with `422`.
 8. Wait for the moderation decision. Read the state with `get_creative`. Only an approved creative can carry a bid.
 9. Call `sandbox_place_bid` with the day, the creative id, the amount and an `idempotency_key`. It takes the same arguments as `place_bid`. It checks the schema and the mandate. It writes nothing and spends nothing.
 10. Call `place_bid` with an `idempotency_key` that you choose. Call `increase_bid` to raise an existing bid.

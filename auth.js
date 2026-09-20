@@ -147,11 +147,15 @@ function openBrowser(url) {
         ]
       : [process.platform === "darwin" ? "open" : "xdg-open", [url], {}];
   try {
-    spawn(command, args, {
+    const child = spawn(command, args, {
       stdio: "ignore",
       detached: true,
       ...options,
-    }).unref();
+    });
+    // A spawn failure arrives as an event, not a throw. The printed URL is the
+    // fallback, so swallowing it keeps the login waiting for the browser.
+    child.on("error", () => {});
+    child.unref();
   } catch {
     // The printed URL is the fallback; a missing opener is not a failure.
   }

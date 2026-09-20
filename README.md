@@ -56,7 +56,7 @@ Public reads need no account. Bidding, creatives and invoices are delegated adve
 ```sh
 node cli.js login --scope "account:read bids:read bids:write creatives:read creatives:write invoices:read"
 node cli.js me
-node cli.js creative upload ./banner.png --headline "Try it" --target-url https://example.com
+node cli.js creative upload ./banner.png --headline "Try it" --description "Short copy" --target-url https://example.com --cta learn-more
 node cli.js creative submit ad_123
 node cli.js bid --day 2026-10-01 --ad ad_123 --amount 2500
 node cli.js bids --day 2026-10-01
@@ -65,6 +65,10 @@ node cli.js logout
 ```
 
 `login` runs the authorization-code flow with PKCE (S256) and an RFC 8252 loopback redirect: it starts a listener on `http://127.0.0.1:<random port>/callback`, opens your browser and prints the URL as a fallback. The client is a Client ID Metadata Document at `https://nowyourlink.com/.well-known/nowyourlink-cli-client.json`. RFC 8252 §7.3 lets the authorization server accept any loopback port, so there is no dynamic-registration fallback. The listener closes as soon as the browser delivers the code, and an RFC 9207 `iss` that does not match the issuer rejects the response. Tokens are written to `~/.config/nowyourlink/token.json` with mode 0600, and a 401 refreshes them once.
+
+`submit` needs a complete draft: headline, description, target URL, CTA label and the uploaded image. A missing field answers 422 `ads.incomplete` and names it. The CTA label is one of `learn-more`, `shop-now`, `sign-up`, `book`, `download`, `contact`. `--display-url` is optional.
+
+`bid` prints its idempotency key on stderr before it sends the request, and again if the request fails. Reuse that key with `--key` to retry the same bid; a new key places a second bid and spends again.
 
 The spend mandate is chosen by the human on the consent page. `--mandate` only prints the amount you want to request; it is not a protocol parameter and grants nothing.
 
