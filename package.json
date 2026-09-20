@@ -1,6 +1,6 @@
 {
   "name": "nowyourlink-agent-kit",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Dependency-free client, CLI and agent plugin for public nowyourlink Spotlights.",
   "homepage": "https://nowyourlink.com",
   "type": "module",
@@ -9,6 +9,11 @@
       "types": "./sdk.d.ts",
       "import": "./sdk.js",
       "default": "./sdk.js"
+    },
+    "./auth": {
+      "types": "./auth.d.ts",
+      "import": "./auth.js",
+      "default": "./auth.js"
     }
   },
   "engines": {
@@ -31,6 +36,8 @@
   "files": [
     "sdk.js",
     "sdk.d.ts",
+    "auth.js",
+    "auth.d.ts",
     "cli.js",
     "plugin.json",
     "mcp.json",

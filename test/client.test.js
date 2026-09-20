@@ -136,11 +136,14 @@ test("installed CLI entrypoint runs through an npm-style symlink", async () => {
   const directory = await mkdtemp(join(tmpdir(), "nyl-cli-test-"));
   try {
     const executable = join(directory, "nowyourlink");
-    await symlink(fileURLToPath(new URL("../cli.js", import.meta.url)), executable);
+    await symlink(
+      fileURLToPath(new URL("../cli.js", import.meta.url)),
+      executable,
+    );
     const output = execFileSync(process.execPath, [executable, "--help"], {
       encoding: "utf8",
     });
-    assert.match(output, /^Usage: nowyourlink current/);
+    assert.match(output, /^Usage:\n {2}nowyourlink current/);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
