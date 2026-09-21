@@ -6,7 +6,7 @@ This kit is prepared locally; registry and plugin marketplace publication are pe
 - [x] Public source repository created and verified. Export only this kit, not private history or application internals.
 - [x] Real public repository URL added to metadata and documentation.
 - [ ] Verify npm and PyPI name availability and publisher ownership; npm authentication is available; owner reports PyPI browser login; upload authentication remains to be verified. Keep tokens outside source files and chat.
-- [x] JavaScript tests (6) and Python 3.11 tests (4) pass locally; rerun against the exported kit before publishing.
+- [x] JavaScript tests (27) and Python 3.11 tests (4) pass locally; rerun against the exported kit before publishing.
 - [x] Built and inspected npm archive, Python wheel and sdist with MIT text included; twine metadata checks pass. Python packaging needs the declared setuptools build dependency, although the SDK runtime uses only the standard library.
 - [x] Prepared manual `publish-python.yml` workflow for GitHub OIDC through the `pypi` environment; configure matching PyPI trusted publisher before dispatch.
 - [x] Owner authorized npm/PyPI publication; npm is publishable and both packages target release 0.1.0.
@@ -20,6 +20,14 @@ Published `nowyourlink-spotlights==0.1.0` using the configured Trusted Publisher
 ## npm publication verified — 2026-09-07
 
 Published `nowyourlink-agent-kit@0.1.0` under MIT. Registry metadata, fresh registry installation, and installed `nowyourlink list --limit 1` all passed. Both npm and PyPI packages are now public. OpenAI submission remains deferred.
+
+## Release 0.3.0
+
+Adds the delegated advertiser client: `nowyourlink login/logout/me`, bids,
+creatives and invoices over OAuth 2.1 with PKCE, plus the
+`advertise-on-nowyourlink` skill and the `server-advertiser.json` registry
+entry. `plugin.json`, `.codex-plugin/plugin.json` and `package.json` all read
+0.3.0. `publish-registry.yml` publishes all three server documents.
 
 ## npm OIDC releases
 

@@ -12,6 +12,18 @@ function integer(value, name, min, max) {
   return value;
 }
 
+/** A calendar date the API addresses a day by. */
+function dayString(day) {
+  if (
+    typeof day !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
+    !Number.isFinite(Date.parse(`${day}T00:00:00Z`)) ||
+    new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) !== day
+  )
+    throw new TypeError("day must be a valid YYYY-MM-DD date.");
+  return day;
+}
+
 /** Public, anonymous reads only. Node.js 22+ or a browser with native fetch. */
 export class SpotlightClient {
   constructor({
@@ -80,13 +92,235 @@ export class SpotlightClient {
   }
 
   day(day) {
-    if (
-      typeof day !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
-      !Number.isFinite(Date.parse(`${day}T00:00:00Z`)) ||
-      new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) !== day
-    )
-      throw new TypeError("day must be a valid YYYY-MM-DD date.");
-    return this.#read(`/api/v1/spotlights/${day}`);
+    return this.#read(`/api/v1/spotlights/${dayString(day)}`);
+  }
+}
+
+/**
+ * An advertiser API failure. `code` is the machine-readable error code, from
+ * the problem+json `code` member or the `{ error: { code, message } }`
+ * envelope the creative routes return. `retryAfter` is the `Retry-After`
+ * delay in seconds, or null when the response carried none.
+ */
+export class AgentError extends Error {
+  constructor(message, status = 0, code = null, retryAfter = null) {
+    super(message);
+    this.name = "AgentError";
+    this.status = status;
+    this.code = code;
+    this.retryAfter = retryAfter;
+  }
+}
+
+/** `Retry-After` is either a delay in seconds or an HTTP date. */
+function retryAfterSeconds(response) {
+  const header = response.headers?.get?.("retry-after");
+  if (!header) return null;
+  if (/^\d+$/.test(header.trim())) return Number(header.trim());
+  const at = Date.parse(header);
+  return Number.isFinite(at)
+    ? Math.max(0, Math.round((at - Date.now()) / 1000))
+    : null;
+}
+
+const CREATIVE_FIELDS = {
+  headline: "headline",
+  description: "body",
+  body: "body",
+  targetUrl: "target_url",
+  displayUrl: "display_url",
+  ctaLabel: "cta_label",
+  altText: "alt_text",
+};
+
+function creativeBody(patch) {
+  if (patch.description !== undefined && patch.body !== undefined)
+    throw new TypeError("Pass either description or body, not both.");
+  const body = {};
+  for (const [key, value] of Object.entries(patch)) {
+    const field = CREATIVE_FIELDS[key];
+    if (!field) throw new TypeError(`Unknown creative field: ${key}`);
+    if (value !== undefined) body[field] = value;
+  }
+  return body;
+}
+
+/**
+ * Delegated advertiser API (spec 17). Every call carries an OAuth 2.1 bearer
+ * token; `refresh` is an optional async function returning a new access token,
+ * used once per request when the server answers 401.
+ */
+export class AdvertiserClient {
+  constructor({
+    baseUrl = "https://api.nowyourlink.com",
+    accessToken,
+    refresh,
+    fetch: fetcher = globalThis.fetch,
+    timeoutMs = 10000,
+  } = {}) {
+    if (typeof accessToken !== "string" || !accessToken)
+      throw new TypeError("accessToken is required.");
+    const url = new URL(baseUrl);
+    if (url.protocol !== "https:" && url.hostname !== "127.0.0.1")
+      throw new TypeError("baseUrl must be an HTTPS origin.");
+    if (typeof fetcher !== "function")
+      throw new TypeError("fetch must be a function.");
+    this.origin = url.origin;
+    this.accessToken = accessToken;
+    this.refresh = refresh;
+    this.fetch = fetcher;
+    this.timeoutMs = integer(timeoutMs, "timeoutMs", 1, 60000);
+  }
+
+  async #send(method, path, { body, headers = {} } = {}) {
+    const request = () =>
+      this.fetch(`${this.origin}${path}`, {
+        method,
+        credentials: "omit",
+        redirect: "error",
+        headers: {
+          accept: "application/json",
+          ...headers,
+          authorization: `Bearer ${this.accessToken}`,
+        },
+        body,
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    let response = await request();
+    if (response.status === 401 && this.refresh) {
+      this.accessToken = await this.refresh();
+      response = await request();
+    }
+    const payload =
+      response.status === 204 ? null : await response.json().catch(() => null);
+    if (!response.ok)
+      throw new AgentError(
+        payload?.detail ??
+          payload?.title ??
+          payload?.error?.message ??
+          `Advertiser API returned HTTP ${response.status}.`,
+        response.status,
+        payload?.code ?? payload?.error?.code ?? null,
+        retryAfterSeconds(response),
+      );
+    return payload;
+  }
+
+  #json(method, path, body, headers) {
+    return this.#send(method, path, {
+      body: JSON.stringify(body),
+      headers: { "content-type": "application/json", ...headers },
+    });
+  }
+
+  me() {
+    return this.#send("GET", "/v1/agent/me");
+  }
+
+  listBids(day) {
+    return this.#send(
+      "GET",
+      `/v1/agent/bids?day=${encodeURIComponent(dayString(day))}`,
+    );
+  }
+
+  placeBid({ day, adId, amountCents, currency = "EUR", idempotencyKey }) {
+    if (!idempotencyKey)
+      throw new TypeError("idempotencyKey is required for a bid.");
+    return this.#json(
+      "POST",
+      "/v1/agent/bids",
+      { day, ad_id: adId, amount_cents: amountCents, currency },
+      { "Idempotency-Key": idempotencyKey },
+    );
+  }
+
+  increaseBid(
+    bidId,
+    { day, adId, amountCents, currency = "EUR", idempotencyKey },
+  ) {
+    if (!idempotencyKey)
+      throw new TypeError("idempotencyKey is required for a bid increase.");
+    return this.#json(
+      "POST",
+      `/v1/agent/bids/${encodeURIComponent(bidId)}/increase`,
+      { day, ad_id: adId, amount_cents: amountCents, currency },
+      { "Idempotency-Key": idempotencyKey },
+    );
+  }
+
+  listCreatives({ cursor, state } = {}) {
+    const query = new URLSearchParams();
+    if (cursor) query.set("cursor", cursor);
+    if (state) query.set("state", state);
+    const search = query.toString();
+    return this.#send(
+      "GET",
+      `/v1/agent/creatives${search ? `?${search}` : ""}`,
+    );
+  }
+
+  getCreative(id) {
+    return this.#send("GET", `/v1/agent/creatives/${encodeURIComponent(id)}`);
+  }
+
+  /**
+   * Uploads the image, then applies any copy to the draft it created. `file`
+   * is a Blob (the CLI reads a path and wraps it); `url` is fetched first.
+   */
+  async uploadCreative({ file, url, filename = "creative", ...copy }) {
+    // Build the patch first: a rejected copy field must fail before the upload
+    // creates a draft that would then be left without its copy.
+    const patch = creativeBody(copy);
+    let blob = file;
+    if (!blob && url) {
+      if (new URL(url).protocol !== "https:")
+        throw new TypeError("url must be HTTPS.");
+      const source = await this.fetch(url, {
+        credentials: "omit",
+        redirect: "error",
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+      if (!source.ok)
+        throw new AgentError(
+          `Creative source returned HTTP ${source.status}.`,
+          source.status,
+          null,
+          retryAfterSeconds(source),
+        );
+      blob = await source.blob();
+    }
+    if (!blob) throw new TypeError("Pass file (a Blob) or url.");
+    const form = new FormData();
+    form.append("file", blob, filename);
+    const uploaded = await this.#send("POST", "/v1/agent/creatives/upload", {
+      body: form,
+    });
+    if (Object.keys(patch).length)
+      await this.#json(
+        "PATCH",
+        `/v1/agent/creatives/${encodeURIComponent(uploaded.ad_id)}`,
+        patch,
+      );
+    return uploaded;
+  }
+
+  updateCreative(id, patch) {
+    return this.#json(
+      "PATCH",
+      `/v1/agent/creatives/${encodeURIComponent(id)}`,
+      creativeBody(patch),
+    );
+  }
+
+  submitCreative(id) {
+    return this.#send(
+      "POST",
+      `/v1/agent/creatives/${encodeURIComponent(id)}/submit`,
+    );
+  }
+
+  listInvoices() {
+    return this.#send("GET", "/v1/agent/invoices");
   }
 }

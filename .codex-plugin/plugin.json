@@ -1,7 +1,7 @@
 {
   "name": "nowyourlink-agent-kit",
-  "version": "0.2.2",
-  "description": "Read public nowyourlink Spotlights and integration documentation.",
+  "version": "0.3.0",
+  "description": "Read public nowyourlink Spotlights and integration documentation, and advertise over delegated OAuth.",
   "author": {
     "name": "nowyourlink"
   },
@@ -9,7 +9,7 @@
   "interface": {
     "displayName": "nowyourlink Spotlights",
     "shortDescription": "Read current and historical public Spotlights.",
-    "longDescription": "Anonymous, read-only access to nowyourlink advertising Spotlights and developer documentation.",
+    "longDescription": "Anonymous, read-only access to nowyourlink advertising Spotlights and developer documentation. A separate OAuth 2.1 server at https://api.nowyourlink.com/mcp places bids and manages creatives for one connected advertiser.",
     "developerName": "nowyourlink",
     "category": "Productivity",
     "capabilities": [],
