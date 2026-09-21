@@ -1,4 +1,4 @@
-// Package nowyourlink reads the public nowyourlink advertising Spotlight API
+// Package nowyourlink is the official nowyourlink Go SDK for the public advertising Spotlight API
 // (https://nowyourlink.com). Documentation: https://nowyourlink.com/developers
 //
 // The API is anonymous. Every method performs one GET against
