@@ -1,7 +1,7 @@
 {
   "name": "nowyourlink-agent-kit",
-  "version": "0.3.0",
-  "description": "Dependency-free client, CLI and agent plugin for public nowyourlink Spotlights, with an OAuth 2.1 advertiser client for delegated bids, creatives and invoices.",
+  "version": "0.3.2",
+  "description": "Official nowyourlink JavaScript and TypeScript SDK, CLI and agent plugin for nowyourlink.com: public Spotlight reads and OAuth 2.1 delegated advertiser actions.",
   "homepage": "https://nowyourlink.com",
   "type": "module",
   "exports": {
@@ -48,5 +48,14 @@
     ".mcp.json",
     "skills/"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "keywords": [
+    "nowyourlink",
+    "sdk",
+    "api-client",
+    "typescript",
+    "javascript",
+    "mcp",
+    "cli"
+  ]
 }

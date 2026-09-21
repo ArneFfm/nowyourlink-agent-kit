@@ -1,4 +1,4 @@
-// Package nowyourlinkagentkit is the official Go module of nowyourlink
+// Package nowyourlinkagentkit provides the official nowyourlink Go SDK
 // (https://nowyourlink.com), the daily advertising Spotlight auction.
 //
 // The client lives in the nowyourlink sub-package:
