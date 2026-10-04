@@ -4,6 +4,10 @@
       "type": "http",
       "url": "https://nowyourlink.com/mcp"
     },
+    "nowyourlink-docs": {
+      "type": "http",
+      "url": "https://nowyourlink.com/mcp/docs"
+    },
     "nowyourlink-advertiser": {
       "type": "http",
       "url": "https://api.nowyourlink.com/mcp"
