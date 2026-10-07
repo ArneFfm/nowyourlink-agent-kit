@@ -97,6 +97,16 @@ To inspect discovery without installing, run `npx skills add ArneFfm/nowyourlink
 
 ## Agent clients
 
+For the bounded ChatGPT **NowYourLink** account plugin, use the separate
+[chatgpt/ package](chatgpt/README.md), named `nowyourlink-account`, version 2.0.1.
+Its single `https://nowyourlink.com/mcp/chatgpt` connection exposes 34 tools:
+two anonymous documentation tools and 32 OAuth-protected account tools.
+Read owned reports, bid history, invoices and affiliate records. Manage owned
+creatives, videos and eligible account preferences. This catalog excludes paid
+bids, purchases, payout requests, payment-method management and public advertising
+feeds. The new plugin remains unsubmitted; approval and publication need separate evidence.
+The general-purpose SDK, CLI and plugin below retain their existing functionality.
+
 Load this directory using your client's local plugin mechanism. Portable clients discover root `plugin.json`, `mcp.json` and the skills under `skills/`. Codex compatibility files are `.codex-plugin/plugin.json` and `.mcp.json`. Three MCP servers are described: the public Spotlight server `https://nowyourlink.com/mcp`, the documentation server `https://nowyourlink.com/mcp/docs`, and the advertiser server `https://api.nowyourlink.com/mcp`, which needs a delegated OAuth 2.1 token. Transport names intentionally follow their respective formats. No client installation or marketplace registration is performed by this kit.
 
 The portable files follow [Agent Plugins 1.0.0](https://agent-plugins.org/specification), and the skill follows [Agent Skills](https://agentskills.io/specification). Product API details: [developer documentation](https://nowyourlink.com/developers), [OpenAPI](https://nowyourlink.com/openapi.json).

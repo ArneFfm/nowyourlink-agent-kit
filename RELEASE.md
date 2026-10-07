@@ -13,6 +13,26 @@ This kit is prepared locally; registry and plugin marketplace publication are pe
 - [ ] Submit the public plugin source to the chosen client marketplace or directory and validate its remote MCP connection.
 - [ ] Verify anonymous source access, install commands, package pages and tool reads after publication before advertising availability.
 
+## ChatGPT account-plugin package — 2026-10-07
+
+The separate `chatgpt/` package supplies version 2.0.1, package name
+`nowyourlink-account`, display name **NowYourLink**. Its single connection uses
+`https://nowyourlink.com/mcp/chatgpt` with 34 tools: two anonymous documentation
+tools and 32 OAuth-protected account tools. It replaces the broad 2.0.0 proposal.
+
+The catalog reads owned campaign reports, auction history, invoices and affiliate
+records. It manages owned creatives, videos and eligible account preferences.
+It excludes paid bidding, purchases, payout requests, payment-method management,
+security credential changes, agent grant changes and public advertising feeds.
+Creative moderation does not buy placement or publish an advertisement.
+
+This plugin remains unsubmitted. Verify the deployed endpoint, scoped OAuth,
+reviewer access and authenticated native workflows before submission.
+Record a fresh demonstration of this bounded catalog; the earlier public
+Spotlight recording does not demonstrate its private workflows.
+Keep the published Developer Docs plugin available during review.
+This source export does not release the SDK or publish a marketplace listing.
+
 ## Verified PyPI release — 2026-09-07
 
 Published `nowyourlink-spotlights==0.1.0` using the configured Trusted Publisher. [Workflow run 34119107611](https://github.com/ArneFfm/nowyourlink-agent-kit/actions/runs/34119107611) succeeded. Both wheel and source distribution are public. A fresh virtual environment installed the package from PyPI and successfully called `SpotlightClient().list(limit=1)`. npm is still awaiting publisher authentication.

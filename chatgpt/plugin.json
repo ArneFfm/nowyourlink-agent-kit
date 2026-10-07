@@ -1,0 +1,44 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "nowyourlink-account",
+  "version": "2.0.1",
+  "description": "Read your NowYourLink reports, bid history and affiliate records, and manage your own creatives, videos and account preferences.",
+  "author": {
+    "name": "Arne Kellmann",
+    "url": "https://nowyourlink.com"
+  },
+  "homepage": "https://nowyourlink.com/developers",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "oauth",
+    "affiliate",
+    "account",
+    "documentation",
+    "video",
+    "reports"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "NowYourLink",
+        "shortDescription": "Reports, creatives and account",
+        "longDescription": "Read integration documentation and connect your NowYourLink account through scoped OAuth. Inspect your own reports, auction status, bid history, invoices and affiliate records. Manage owned image and video creatives, eligible company details and contact preferences. Creative moderation does not buy placement or publish advertisements. Video rendering requires a separate runtime. This connection does not place paid bids, initiate payouts, manage cards or serve public advertisements.",
+        "developerName": "Arne Kellmann",
+        "category": "Productivity",
+        "capabilities": ["Read", "Write"],
+        "websiteURL": "https://nowyourlink.com/developers",
+        "privacyPolicyURL": "https://nowyourlink.com/datenschutz",
+        "termsOfServiceURL": "https://nowyourlink.com/agb",
+        "defaultPrompt": [
+          "Summarize my NowYourLink campaign reports and bid history.",
+          "Show my NowYourLink affiliate statistics and payout history.",
+          "Show my creative moderation status and notification preferences."
+        ],
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/icon.png",
+        "supportURL": "https://nowyourlink.com/contact"
+      }
+    }
+  }
+}
